@@ -6,5 +6,5 @@ import solve
 print('Loading instances...')
 instances = instance.get_size(sys.argv[1])
 print('Solving...')
-tts = solve.get_tts(instances)
+tts = solve.bench_tempering(instances)
 print(tts)
