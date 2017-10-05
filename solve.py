@@ -76,7 +76,7 @@ def check_thermalized(data, obs, threshold=.99):
 def get_observable(instances, obs, temp_set, max_iterations = 4):
     sweeps = 4096
     for i in range(max_iterations):
-        schedule = propanelib.make_schedule(sweeps*2**i, temp_set, instances[0]['bondscale'])
+        schedule = propanelib.make_schedule(sweeps*4**i, temp_set, instances[0]['bondscale'])
         instances = run_instances(schedule, instances, restarts = 1)
         # check equillibriation
         if np.all(np.vectorize(lambda i, obs: check_thermalized(i['results'], obs))(instances, obs)):
@@ -84,7 +84,7 @@ def get_observable(instances, obs, temp_set, max_iterations = 4):
         
         if i == max_iterations-1:
             warnings.warn('Maximum iterations in get_observable reached')
-    return [i['results'].iloc[i['results']['Bin']==i['results']['Bin'].max()] for i in instances]
+    return [i['results'][i['results']['Bin']==i['results']['Bin'].max()] for i in instances]
 
 # Disorder average <E>(Gamma)
 # Fit temperatures to make dEd1/T constant
@@ -103,6 +103,7 @@ def bench_tempering(instances):
     residual = lambda x: [cost - np.mean(cost) for cost in [np.ediff1d(sorted) * np.ediff1d(energy(reciprocal(sorted))) for sorted in [np.sort(np.reciprocal(np.concatenate((x, fixed))))]]][0]
     temperatures = sp.optimize.minimize(residual, temp_set,  bounds=[(fixed[-1], fixed[0]) for t in temp_set])
     temperatures = np.flip(np.sort(np.concatenate((temperatures, temp_set))))
+    print(temperatures)
     return get_opt_tts(instances, temperatures)
 
 
