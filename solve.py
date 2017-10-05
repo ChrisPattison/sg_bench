@@ -76,7 +76,7 @@ def check_thermalized(data, obs, threshold=.99):
 def get_observable(instances, obs, temp_set, max_iterations = 4):
     sweeps = 4096
     for i in range(max_iterations):
-        schedule = propanelib.make_schedule(sweeps*4**i, temp_set, instances[0]['bondscale'])
+        schedule = propanelib.make_schedule(sweeps, temp_set, instances[0]['bondscale'])
         instances = run_instances(schedule, instances, restarts = 1)
         # check equillibriation
         if np.all(np.vectorize(lambda i, obs: check_thermalized(i['results'], obs))(instances, obs)):
@@ -84,6 +84,7 @@ def get_observable(instances, obs, temp_set, max_iterations = 4):
         
         if i == max_iterations-1:
             warnings.warn('Maximum iterations in get_observable reached')
+        sweeps *= 4
         print(str(obs) + ' not thermalized. Using '+str(sweeps)+' sweeps')
     return [i['results'][i['results']['Bin']==i['results']['Bin'].max()] for i in instances]
 
