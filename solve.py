@@ -65,12 +65,12 @@ def get_opt_tts(instances, temp_set, init_sweeps=128, cost=np.median):
     return get_tts(instances, opt_sweeps)
 
 # Check whether the results are thermalized based on residual from last bin
-def check_thermalized(data, obs, threshold=.99):
+def check_thermalized(data, obs, threshold=.001):
     for name, group in data.groupby(['Gamma']):
         sorted_group = group.sort_values(['Bin'])
-        residual = np.abs(sorted_group.iloc[-1][obs] - sorted_group.iloc[-2][obs])/np.mean(sorted_group.iloc[:-2][obs])
-        if(residual < threshold):
-            print(str(obs) + ' not thermalized. Residual: '+str(1.0-residual))
+        residual = np.abs(sorted_group.iloc[-1][obs] - sorted_group.iloc[-2][obs])/np.mean(sorted_group.iloc[-2:][obs])
+        if(residual > threshold):
+            print(str(obs) + ' not thermalized. Residual: '+str(residual))
             return False
     return True
 
