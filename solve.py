@@ -68,12 +68,14 @@ def get_opt_tts(instances, temp_set, init_sweeps=128, cost=np.median):
 def check_thermalized(data, obs, threshold=.99):
     for name, group in data.groupby(['Gamma']):
         sorted_group = group.sort_values(['Bin'])
-        if(np.abs(sorted_group.iloc[-1][obs] - sorted_group.iloc[-2][obs])/np.mean(sorted_group.iloc[:-2][obs]) < threshold):
+        residual = np.abs(sorted_group.iloc[-1][obs] - sorted_group.iloc[-2][obs])/np.mean(sorted_group.iloc[:-2][obs])
+        if(residual < threshold):
+            print(str(obs) + ' not thermalized. Residual: '+str(1.0-residual))
             return False
     return True
 
 # Return observables with thermalization based on observable obs
-def get_observable(instances, obs, temp_set, max_iterations = 4):
+def get_observable(instances, obs, temp_set, max_iterations = 3):
     sweeps = 4096
     for i in range(max_iterations):
         schedule = propanelib.make_schedule(sweeps, temp_set, instances[0]['bondscale'])
@@ -85,7 +87,7 @@ def get_observable(instances, obs, temp_set, max_iterations = 4):
         if i == max_iterations-1:
             warnings.warn('Maximum iterations in get_observable reached')
         sweeps *= 4
-        print(str(obs) + ' not thermalized. Using '+str(sweeps)+' sweeps')
+        print('Using '+str(sweeps)+' sweeps')
     return [i['results'][i['results']['Bin']==i['results']['Bin'].max()] for i in instances]
 
 # Disorder average <E>(Gamma)
