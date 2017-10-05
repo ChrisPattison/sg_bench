@@ -84,13 +84,16 @@ def get_observable(instances, obs, temp_set, max_iterations = 4):
         
         if i == max_iterations-1:
             warnings.warn('Maximum iterations in get_observable reached')
+        print(str(obs) + ' not thermalized. Using '+str(sweeps)+' sweeps')
     return [i['results'][i['results']['Bin']==i['results']['Bin'].max()] for i in instances]
 
 # Disorder average <E>(Gamma)
 # Fit temperatures to make dEd1/T constant
 # Optimize MC move count (NOT IMPLEMENTED)
+# Optimize temperature count
 # Get optimal TTS
 def bench_tempering(instances):
+    print('Getting temperature set...')
     temp_set = np.linspace(3, 0, 32)
     # fit to disorder averaged E(Gamma)
     disorder_avg = pd.concat(get_observable(instances, '<E>', temp_set)).groupby(['Gamma']).mean()
@@ -104,6 +107,7 @@ def bench_tempering(instances):
     temperatures = sp.optimize.minimize(residual, temp_set,  bounds=[(fixed[-1], fixed[0]) for t in temp_set])
     temperatures = np.flip(np.sort(np.concatenate((temperatures, temp_set))))
     print(temperatures)
+    print('Benchmarking...')
     return get_opt_tts(instances, temperatures)
 
 
