@@ -35,7 +35,7 @@ def make_schedule(sweeps, steps, bondscale, bins=None):
     beta = 0.51/bondscale
     mc_sweeps = 1
 
-    schedule = {'sweeps':int(sweeps), 'solver_mode':True, 'uniform_init':True, \
+    schedule = {'sweeps':int(sweeps), 'solver_mode':True, 'uniform_init':False, \
         'schedule':[{ 'beta':beta, 'gamma':s, 'metropolis':1, 'microcanonical':mc_sweeps } for s in steps],\
         'bin_set':([int(sweeps)/2**i for i in range(8)] if bins is None else bins)}
     return json.dumps(schedule, indent=1)
