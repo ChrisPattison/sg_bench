@@ -50,11 +50,14 @@ def get_opt_tts(instances, temp_set, init_sweeps=128, cost=np.median):
 
     while True:
         trials.append({'tts':cost(get_tts(instances, temp_set, sweeps)), 'sweeps':sweeps})
-        # Upper bound on minimum TTS given by maximum of range
-        if trials[-2] < trials[-1]:
-            break
+        if trials[-2]['tts'] is np.NaN:
+            trials = trials[:-2] + trials[-1:]
+        else:
+            # Upper bound on minimum TTS given by maximum of range
+            if trials[-2]['tts'] < trials[-1]['tts']:
+                break
         sweeps *= 2
-
+        print(sweeps)
     if len(trials) <=2:
         warnings.warn('Minimum TTS found in less than 2 iterations')
 
