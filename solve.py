@@ -4,7 +4,7 @@ import pandas as pd
 import warnings
 import tempfile
 import bondfile
-import propanelib
+import pt_propanelib as propanelib
 import localrun
 
 def run_instances(schedule, instances, restarts = 100):
@@ -60,7 +60,7 @@ def get_opt_tts(instances, temp_set, init_sweeps=128, cost=np.median):
 
     # fit to find optimal sweep count
     trials = pd.DataFrame.from_records(trials)
-    opt_sweeps = int(np.exp(np.polyfit(trials['sweeps'].log(), trials['tts'].log(), 2)[2]))
+    opt_sweeps = int(np.exp(np.polyfit(np.log(trials['sweeps']), np.log(trials['tts']), 2)[2]))
     # Return TTS at optimal sweep count
     return get_tts(instances, opt_sweeps)
 
