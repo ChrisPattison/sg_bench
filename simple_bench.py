@@ -4,7 +4,7 @@ import sys
 import instance
 import solve
 
-if sys.argc < 4:
+if len(sys.argv) < 4:
     print('simple_bench.py <instances> <T High> <T Low> <T Count>')
     print('Field set uniformly distributed in 1/T if count is negative')
     quit()
