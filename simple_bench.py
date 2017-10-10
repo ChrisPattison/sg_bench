@@ -19,5 +19,5 @@ if count < 0:
 else:
     temp_set = np.linspace(float(sys.argv[3]), float(sys.argv[2]), count)
 
-tts = solve.get_opt_tts(instances, temp_set)
+tts = solve.get_opt_tts(instances, temp_set*instances[0]['bondscale'])
 print(tts)
