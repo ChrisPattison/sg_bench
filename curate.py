@@ -7,6 +7,7 @@ import warnings
 import io
 import sys
 import tempfile
+import multiprocessing
 
 # Creates and solves for the ground state of some spin glass instances given a template bondfile
 
@@ -24,9 +25,11 @@ def main():
 
     with tempfile.NamedTemporaryFile('w') as sch_file:
         # write schedule
-        sch_file.write(pa_propanelib.make_schedule(2000, 2000))
+        sch_file.write(pa_propanelib.make_schedule(20000, 2000))
         sch_file.flush()
 
+	pool = multiprocessing.Pool(40)
+	results = []
         for n in range(count):
             print(n)
             instance = template
@@ -35,8 +38,10 @@ def main():
             instance_file = sys.argv[1]+'.'+str(n)
             with open(instance_file, 'w') as bonds:
                 bondfile.write_bondfile(instance, bonds)
+            results.append(pool.apply_async(pa_propanelib.run_restart(sch_file.name, instance_file)))
 
-            result = pa_propanelib.run_restart(sch_file.name, instance_file)
+        for n in range(count):
+            result = results[n].get()
             if result[result['Beta']==result['Beta'].max()]['R_MIN'].max() > 100:
                 ground_states.append({'instance':str(n), 'energy':float(result[result['Beta']==result['Beta'].max()]['E_MIN'])})
             else:

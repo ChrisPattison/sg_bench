@@ -33,6 +33,7 @@ def get_tts(instances, temp_set, sweeps):
     
     tts = []
     for i in instances:
+	print(i['results']['E_MIN'].min())
         success_prob = np.mean(np.isclose(i['ground_energy'], i['results']['E_MIN']))
         tts.append(np.mean(i['results']['Total_Sweeps'])*np.log(1-.99)/np.log(1. - success_prob))
     
@@ -42,7 +43,7 @@ def get_tts(instances, temp_set, sweeps):
 # Should this cost function be bootstrapped for the fit?
 # Double sweeps until the minimum TTS is included in the range
 # Fit polynomial to TTS to find optimum sweep count
-def get_opt_tts(instances, temp_set, init_sweeps=128, cost=np.median):
+def get_opt_tts(instances, temp_set, init_sweeps=32, cost=np.median):
     sweeps = init_sweeps
     trials = []
     trials.append({'tts':cost(get_tts(instances, temp_set, sweeps)), 'sweeps':sweeps})
@@ -57,7 +58,7 @@ def get_opt_tts(instances, temp_set, init_sweeps=128, cost=np.median):
             if trials[-2]['tts'] < trials[-1]['tts']:
                 break
         sweeps *= 2
-        print(sweeps)
+	print(trials)
     if len(trials) <=2:
         warnings.warn('Minimum TTS found in less than 2 iterations')
 

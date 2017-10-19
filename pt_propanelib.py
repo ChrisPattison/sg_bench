@@ -32,7 +32,7 @@ def extract_data(output):
     return data
 
 def make_schedule(sweeps, steps, bondscale, bins=None):
-    beta = 0.51/bondscale
+    beta = 5.0/bondscale
     mc_sweeps = 1
 
     schedule = {'sweeps':int(sweeps), 'solver_mode':True, 'uniform_init':False, \
