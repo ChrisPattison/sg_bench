@@ -20,3 +20,4 @@ else:
 
 tts = solve.get_opt_tts(instances, temp_set*instances[0]['bondscale'])
 print(tts)
+print('Median TTS: '+str(np.median(tts)))
