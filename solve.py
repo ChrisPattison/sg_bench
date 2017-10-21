@@ -112,9 +112,9 @@ def get_observable(instances, obs, temp_set, max_iterations = 3):
 # Optimize MC move count (NOT IMPLEMENTED)
 # Optimize temperature count
 # Get optimal TTS
-def bench_tempering(instances):
+def bench_tempering(instances, field = (3, 0.1), field_count = 32):
     print('Getting temperature set...')
-    temp_set = np.linspace(3, 0.1, 32)*instances[0]['bondscale']
+    temp_set = np.linspace(field[0], field[1], field_count)*instances[0]['bondscale']
     # fit to disorder averaged E(Gamma)
     disorder_avg = pd.concat(get_observable(instances, '<E>', temp_set)).groupby(['Gamma']).mean().reset_index()
     energy = sp.interpolate.interp1d(disorder_avg['Gamma'], disorder_avg['<E>'], kind='quadratic')
