@@ -5,10 +5,14 @@ import subprocess
 import propanelib
 
 def run_restart(schedule_file, instance_file): # schedule, instance
-    command = ['propane_ptsvmc', '-m', 'pt', schedule_file, instance_file]
-    output = subprocess.check_output(command, universal_newlines=True)
-    output = output.split('\n')
-    restart_data = propanelib.extract_data(output)
+    restart_data = []
+    try:
+        command = ['propane_ptsvmc', '-m', 'pt', schedule_file, instance_file]
+        output = subprocess.check_output(command, universal_newlines=True)
+        output = output.split('\n')
+        restart_data = propanelib.extract_data(output)
+    except Exception as e:
+        print(e)
     return restart_data
 
 def get_data(schedule_file, instance_file, restarts=100, parallel=True):
