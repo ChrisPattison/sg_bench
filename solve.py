@@ -7,7 +7,7 @@ import bondfile
 import pt_propanelib as propanelib
 import localrun
 
-def run_instances(schedule, instances, restarts = 100):
+def run_instances(schedule, instances, restarts = 400):
     with tempfile.NamedTemporaryFile('w') as sch_file:
         # write schedule
         sch_file.write(schedule)
@@ -33,7 +33,7 @@ def get_tts(instances, temp_set, sweeps):
     
     tts = []
     for i in instances:
-	print(i['results']['E_MIN'].min())
+        print(i['results']['E_MIN'].min())
         success_prob = np.mean(np.isclose(i['ground_energy'], i['results']['E_MIN']))
         tts.append(np.mean(i['results']['Total_Sweeps'])*np.log(1-.99)/np.log(1. - success_prob))
     
@@ -51,8 +51,8 @@ def get_opt_tts(instances, temp_set, init_sweeps=32, cost=np.median):
 
     while True:
         trials.append({'tts':cost(get_tts(instances, temp_set, sweeps)), 'sweeps':sweeps})
-        if trials[-2]['tts'] is np.NaN:
-            trials = trials[:-2] + trials[-1:]
+        if np.isinf(trials[-2]['tts']):
+            trials = [trials[-1]]
         else:
             # Upper bound on minimum TTS given by maximum of range
             if trials[-2]['tts'] < trials[-1]['tts']:
@@ -66,7 +66,7 @@ def get_opt_tts(instances, temp_set, init_sweeps=32, cost=np.median):
     trials = pd.DataFrame.from_records(trials)
     opt_sweeps = int(np.exp(np.polyfit(np.log(trials['sweeps']), np.log(trials['tts']), 2)[2]))
     # Return TTS at optimal sweep count
-    return get_tts(instances, opt_sweeps)
+    return get_tts(instances, temp_set, opt_sweeps)
 
 # Check whether the results are thermalized based on residual from last bin
 def check_thermalized(data, obs, threshold=.001):
