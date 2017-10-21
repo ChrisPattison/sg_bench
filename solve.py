@@ -1,5 +1,6 @@
 import numpy as np
 import scipy as sp
+import scipy.interpolate
 import pandas as pd
 import warnings
 import tempfile
@@ -71,7 +72,7 @@ def get_opt_tts(instances, temp_set, init_sweeps=32, cost=np.median):
 # Check whether the results are thermalized based on residual from last bin
 def check_thermalized(data, obs, threshold=.001):
     for name, group in data.groupby(['Gamma']):
-        sorted_group = group.sort_values(['Bin'])
+        sorted_group = group.sort_values(['Samples'])
         residual = np.abs(sorted_group.iloc[-1][obs] - sorted_group.iloc[-2][obs])/np.mean(sorted_group.iloc[-2:][obs])
         if(residual > threshold):
             print(str(obs) + ' not thermalized. Residual: '+str(residual))
@@ -92,7 +93,7 @@ def get_observable(instances, obs, temp_set, max_iterations = 3):
             warnings.warn('Maximum iterations in get_observable reached')
         sweeps *= 4
         print('Using '+str(sweeps)+' sweeps')
-    return [i['results'][i['results']['Bin']==i['results']['Bin'].max()] for i in instances]
+    return [i['results'][i['results']['Samples']==i['results']['Samples'].max()] for i in instances]
 
 # Disorder average <E>(Gamma)
 # Fit temperatures to make dEd1/T constant
@@ -101,18 +102,20 @@ def get_observable(instances, obs, temp_set, max_iterations = 3):
 # Get optimal TTS
 def bench_tempering(instances):
     print('Getting temperature set...')
-    temp_set = np.linspace(3, 0, 32)
+    temp_set = np.linspace(3, 0.1, 32)*instances[0]['bondscale']
     # fit to disorder averaged E(Gamma)
-    disorder_avg = pd.concat(get_observable(instances, '<E>', temp_set)).groupby(['Gamma']).mean()
+    disorder_avg = pd.concat(get_observable(instances, '<E>', temp_set)).groupby(['Gamma']).mean().reset_index()
+    print(disorder_avg)
     energy = sp.interpolate.interp1d(disorder_avg['Gamma'], disorder_avg['<E>'], kind='quadratic')
     fixed = [temp_set[0], temp_set[-1]]
-    del temp_set[0]
-    del temp_set[-1]
+    temp_set = temp_set[1:-1]
     # new temperature set has constant dE*d1/T
     # List comprehensions to do binary operations
-    residual = lambda x: [cost - np.mean(cost) for cost in [np.ediff1d(sorted) * np.ediff1d(energy(reciprocal(sorted))) for sorted in [np.sort(np.reciprocal(np.concatenate((x, fixed))))]]][0]
-    temperatures = sp.optimize.minimize(residual, temp_set,  bounds=[(fixed[-1], fixed[0]) for t in temp_set])
-    temperatures = np.flip(np.sort(np.concatenate((temperatures, temp_set))))
+    # residual = lambda x: [cost - np.mean(cost) for cost in [np.ediff1d(sorted) * np.ediff1d(energy(np.reciprocal(sorted))) for sorted in [np.sort(np.reciprocal(np.concatenate((x, fixed))))]]][0]
+    # new temperature set has constant dE*dT
+    residual = lambda x: np.linalg.norm([cost - np.mean(cost) for cost in [np.ediff1d(sorted) * np.ediff1d(energy(sorted)) for sorted in [np.sort(np.concatenate((x, fixed)))]]][0])
+    temperatures = sp.optimize.minimize(residual, temp_set,  bounds=[(fixed[-1]+1e-6, fixed[0]-1e-6) for t in temp_set])
+    temperatures = np.sort(np.concatenate((temperatures['x'], temp_set)))
     print(temperatures)
     print('Benchmarking...')
     return get_opt_tts(instances, temperatures)
