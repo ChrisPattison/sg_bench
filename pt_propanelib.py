@@ -31,8 +31,8 @@ def extract_data(output):
     data = pd.concat(bins)
     return data
 
-def make_schedule(sweeps, steps, bondscale, bins=None):
-    beta = 5.0/bondscale
+def make_schedule(sweeps, steps, bondscale, bins=None, beta = 10):
+    beta /= bondscale
     mc_sweeps = 1
 
     schedule = {'sweeps':int(sweeps), 'solver_mode':True, 'uniform_init':False, \
