@@ -6,11 +6,14 @@ import propanelib
 
 def run_restart(schedule_file, instance_file): # schedule, instance
     restart_data = []
+    command = ['propane_ptsvmc', '-m', 'pt', schedule_file, instance_file]
     try:
-        command = ['propane_ptsvmc', '-m', 'pt', schedule_file, instance_file]
         output = subprocess.check_output(command, universal_newlines=True)
         output = output.split('\n')
         restart_data = propanelib.extract_data(output)
+    except subprocess.CalledProcessError as e:
+        print(e)
+        print(e.output)
     except Exception as e:
         print(e)
     return restart_data
