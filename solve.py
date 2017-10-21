@@ -9,7 +9,7 @@ import bondfile
 import pt_propanelib as propanelib
 import localrun
 
-def run_instances(schedule, instances, restarts = 400):
+def run_instances(schedule, instances, restarts = 100):
     with tempfile.NamedTemporaryFile('w') as sch_file:
         # write schedule
         sch_file.write(schedule)
@@ -26,12 +26,12 @@ def run_instances(schedule, instances, restarts = 400):
     return instances
 
 # Get TTS given a temperature set and sweep count
-def get_tts(instances, temp_set, sweeps):
+def get_tts(instances, temp_set, sweeps, restarts = 100):
     results = []
     
     # make schedule
     schedule = propanelib.make_schedule(sweeps, temp_set, instances[0]['bondscale'])
-    instances = run_instances(schedule, instances)
+    instances = run_instances(schedule, instances, restarts)
     
     tts = []
     for i in instances:
@@ -79,7 +79,7 @@ def get_opt_tts(instances, temp_set, init_sweeps=128, cost=np.median):
 
     opt_sweeps = fit_opt_sweeps(trials)
     # Return TTS at optimal sweep count
-    return get_tts(instances, temp_set, opt_sweeps)
+    return get_tts(instances, temp_set, opt_sweeps, restarts = 400)
 
 # Check whether the results are thermalized based on residual from last bin
 def check_thermalized(data, obs, threshold=.001):
