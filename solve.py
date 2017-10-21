@@ -124,7 +124,7 @@ def bench_tempering(instances, field = (3, 0.1), field_count = 32):
     # new temperature set has constant dE*dT
     residual = lambda x: np.linalg.norm([cost - np.mean(cost) for cost in [np.ediff1d(sorted) * np.ediff1d(energy(sorted)) for sorted in [np.sort(np.concatenate((x, fixed)))]]][0])
     temperatures = sp.optimize.minimize(residual, temp_set,  bounds=[(fixed[-1]+1e-6, fixed[0]-1e-6) for t in temp_set])
-    temperatures = np.sort(np.concatenate((temperatures['x'], temp_set)))
+    temperatures = np.sort(np.concatenate((temperatures['x'], fixed)))
     print(temperatures)
     print('Benchmarking...')
     return get_opt_tts(instances, temperatures)
