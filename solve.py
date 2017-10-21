@@ -1,6 +1,7 @@
 import numpy as np
 import scipy as sp
 import scipy.interpolate
+import scipy.optimize
 import pandas as pd
 import warnings
 import tempfile
@@ -34,17 +35,28 @@ def get_tts(instances, temp_set, sweeps):
     
     tts = []
     for i in instances:
-        print(i['results']['E_MIN'].min())
         success_prob = np.mean(np.isclose(i['ground_energy'], i['results']['E_MIN']))
         tts.append(np.mean(i['results']['Total_Sweeps'])*np.log(1-.99)/np.log(1. - success_prob))
     
     return tts
 
+def fit_opt_sweeps(trials):
+    trials = pd.DataFrame.from_records(trials)
+    trials = trials.sort_values('sweeps').tail(4)
+    trials['log_sweeps'] = np.log(trials['sweeps'])
+    trials['log_tts'] = np.log(trials['tts'])
+    fit = sp.optimize.least_squares(lambda x: ((x[0] * (trials['log_sweeps'] - x[1])**2 + x[2])-trials['log_tts']), [np.mean(trials['log_tts']), trials['log_sweeps'].iloc[-2], np.mean(trials['log_tts'])])['x']
+    opt_sweeps = int(np.exp(fit[1]))
+    if opt_sweeps > trials['sweeps'].max():
+        warnings.warn('Optimal sweep count more than maximum sweep count tested. Got: '+str(opt_sweeps))
+        assert(opt_sweeps < 2*trials['sweeps'].max())
+    return opt_sweeps
+
 # Find optimal TTS given a temperature set
 # Should this cost function be bootstrapped for the fit?
 # Double sweeps until the minimum TTS is included in the range
 # Fit polynomial to TTS to find optimum sweep count
-def get_opt_tts(instances, temp_set, init_sweeps=32, cost=np.median):
+def get_opt_tts(instances, temp_set, init_sweeps=128, cost=np.median):
     sweeps = init_sweeps
     trials = []
     trials.append({'tts':cost(get_tts(instances, temp_set, sweeps)), 'sweeps':sweeps})
@@ -64,8 +76,8 @@ def get_opt_tts(instances, temp_set, init_sweeps=32, cost=np.median):
         warnings.warn('Minimum TTS found in less than 2 iterations')
 
     # fit to find optimal sweep count
-    trials = pd.DataFrame.from_records(trials)
-    opt_sweeps = int(np.exp(np.polyfit(np.log(trials['sweeps']), np.log(trials['tts']), 2)[2]))
+
+    opt_sweeps = fit_opt_sweeps(trials)
     # Return TTS at optimal sweep count
     return get_tts(instances, temp_set, opt_sweeps)
 
@@ -105,13 +117,10 @@ def bench_tempering(instances):
     temp_set = np.linspace(3, 0.1, 32)*instances[0]['bondscale']
     # fit to disorder averaged E(Gamma)
     disorder_avg = pd.concat(get_observable(instances, '<E>', temp_set)).groupby(['Gamma']).mean().reset_index()
-    print(disorder_avg)
     energy = sp.interpolate.interp1d(disorder_avg['Gamma'], disorder_avg['<E>'], kind='quadratic')
     fixed = [temp_set[0], temp_set[-1]]
     temp_set = temp_set[1:-1]
-    # new temperature set has constant dE*d1/T
     # List comprehensions to do binary operations
-    # residual = lambda x: [cost - np.mean(cost) for cost in [np.ediff1d(sorted) * np.ediff1d(energy(np.reciprocal(sorted))) for sorted in [np.sort(np.reciprocal(np.concatenate((x, fixed))))]]][0]
     # new temperature set has constant dE*dT
     residual = lambda x: np.linalg.norm([cost - np.mean(cost) for cost in [np.ediff1d(sorted) * np.ediff1d(energy(sorted)) for sorted in [np.sort(np.concatenate((x, fixed)))]]][0])
     temperatures = sp.optimize.minimize(residual, temp_set,  bounds=[(fixed[-1]+1e-6, fixed[0]-1e-6) for t in temp_set])
