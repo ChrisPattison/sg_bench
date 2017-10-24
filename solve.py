@@ -108,20 +108,22 @@ def get_field_set(distance, low, count, energy):
 # Optimize MC move count (NOT IMPLEMENTED)
 # Optimize temperature count
 # Get optimal TTS
-def bench_tempering(instances, field = (3, 0.1), field_count = 32):
+def bench_tempering(instances, field = (3, 0.1), field_count = 32, optimize_fields = True):
     print('Computing observables...')
     field_set = np.linspace(field[0], field[1], field_count)*instances[0]['bondscale']
     # fit to disorder averaged E(Gamma)
     disorder_avg = pd.concat(get_observable(instances, '<E>', field_set)).groupby(['Gamma']).mean().reset_index()
-    energy = sp.interpolate.interp1d(disorder_avg['Gamma'], disorder_avg['<E>'], kind='quadratic', bounds_error=False, fill_value='extrapolate')
+    time_per_sweep = np.median(disorder_avg['Total_Walltime']/disorder_avg['Total_Sweeps'])
+    if optimize_fields:
+        energy = sp.interpolate.interp1d(disorder_avg['Gamma'], disorder_avg['<E>'], kind='quadratic', bounds_error=False, fill_value='extrapolate')
 
-    print('Computing temperature set...')
-    residual = lambda k: (np.max(get_field_set(k[0], field_set[-1], field_count, energy)) - field_set[0])**2
-    temp_seperation = sp.optimize.minimize(residual, [(np.max(field_set) - np.min(field_set))/field_count], method='CG', options={'gtol':1e-4, 'eps':1e-6})['x'][0]
-    temperatures = get_field_set(temp_seperation, field_set[-1], field_count, energy)
-    print(temperatures)
+        print('Computing field set...')
+        residual = lambda k: (np.max(get_field_set(k[0], field_set[-1], field_count, energy)) - field_set[0])**2
+        temp_seperation = sp.optimize.minimize(residual, [(np.max(field_set) - np.min(field_set))/field_count], method='CG', options={'gtol':1e-4, 'eps':1e-6})['x'][0]
+        field_set = get_field_set(temp_seperation, field_set[-1], field_count, energy)
+        print(field_set)
     print('Benchmarking...')
-    return get_opt_tts(instances, temperatures)
+    return get_opt_tts(instances, field_set), time_per_sweep
 
 
 
