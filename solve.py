@@ -9,7 +9,7 @@ import bondfile
 import pt_propanelib as propanelib
 import localrun
 
-def run_instances(schedule, instances, restarts = 100):
+def run_instances(schedule, instances, restarts = 100, statistics=True):
     with tempfile.NamedTemporaryFile('w') as sch_file:
         # write schedule
         sch_file.write(schedule)
@@ -22,7 +22,12 @@ def run_instances(schedule, instances, restarts = 100):
                 bonds_file.flush()
                 
                 # run restarts
-                i['results'] = localrun.get_data(sch_file.name, bonds_file.name, restarts = restarts)
+                ground_energy = None
+                if not statistics:
+                    ground_energy = i['ground_energy']
+                i['results'] = localrun.get_data(sch_file.name, bonds_file.name, restarts = restarts, ground_energy = ground_energy)
+                if not statistics:
+                    i['results'] = i['results'][i['results']['Total_Sweeps'] == i['results']['Total_Sweeps'].max()]
     return instances
 
 # Get TTS given a temperature set and sweep count
@@ -31,12 +36,16 @@ def get_tts(instances, field_set, sweeps, restarts = 100):
     
     # make schedule
     schedule = propanelib.make_schedule(sweeps, field_set, instances[0]['bondscale'])
-    instances = run_instances(schedule, instances, restarts)
+    instances = run_instances(schedule, instances, restarts, statistics=False)
     
     tts = []
     for i in instances:
+        print(i['results'])
         success_prob = np.mean(np.isclose(i['ground_energy'], i['results']['E_MIN']))
-        tts.append(np.mean(i['results']['Total_Sweeps'])*np.log(1-.99)/np.log(1. - success_prob))
+        if not np.isclose(success_prob, 1.0):
+            warnings.warn('TTS run timed out. Success probability: '+str(success_prob))
+        tts.append(np.percentile(i['results']['Total_Sweeps'].max(), .99))
+        # tts.append(np.max(i['results']['Total_Sweeps'])*np.log(1-.99)/np.log(1. - success_prob))
     
     return tts
 
@@ -58,6 +67,8 @@ def fit_opt_sweeps(trials):
 # Double sweeps until the minimum TTS is included in the range
 # Fit polynomial to TTS to find optimum sweep count
 def get_opt_tts(instances, field_set, init_sweeps=128, cost=np.median):
+    return get_tts(instances, field_set, 4096, restarts=100)
+
     sweeps = init_sweeps
     trials = []
     trials.append({'tts':cost(get_tts(instances, field_set, sweeps)), 'sweeps':sweeps})
