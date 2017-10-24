@@ -40,12 +40,10 @@ def get_tts(instances, field_set, sweeps, restarts = 100):
     
     tts = []
     for i in instances:
-        print(i['results'])
         success_prob = np.mean(np.isclose(i['ground_energy'], i['results']['E_MIN']))
         if not np.isclose(success_prob, 1.0):
             warnings.warn('TTS run timed out. Success probability: '+str(success_prob))
         tts.append(np.percentile(i['results']['Total_Sweeps'].max(), .99))
-        # tts.append(np.max(i['results']['Total_Sweeps'])*np.log(1-.99)/np.log(1. - success_prob))
     
     return tts
 
@@ -67,31 +65,7 @@ def fit_opt_sweeps(trials):
 # Double sweeps until the minimum TTS is included in the range
 # Fit polynomial to TTS to find optimum sweep count
 def get_opt_tts(instances, field_set, init_sweeps=128, cost=np.median):
-    return get_tts(instances, field_set, 4096, restarts=100)
-
-    sweeps = init_sweeps
-    trials = []
-    trials.append({'tts':cost(get_tts(instances, field_set, sweeps)), 'sweeps':sweeps})
-    sweeps *= 2
-
-    while True:
-        trials.append({'tts':cost(get_tts(instances, field_set, sweeps)), 'sweeps':sweeps})
-        if np.isinf(trials[-2]['tts']):
-            trials = [trials[-1]]
-        else:
-            # Upper bound on minimum TTS given by maximum of range
-            if trials[-2]['tts'] < trials[-1]['tts']:
-                break
-        sweeps *= 2
-	print(trials)
-    if len(trials) <=2:
-        warnings.warn('Minimum TTS found in less than 2 iterations')
-
-    # fit to find optimal sweep count
-
-    opt_sweeps = fit_opt_sweeps(trials)
-    # Return TTS at optimal sweep count
-    return get_tts(instances, field_set, opt_sweeps, restarts = 400)
+    return get_tts(instances, field_set, 4096, restarts=400)
 
 # Check whether the results are thermalized based on residual from last bin
 def check_thermalized(data, obs, threshold=.001):
