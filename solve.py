@@ -27,7 +27,7 @@ def run_instances(schedule, instances, restarts = 100, statistics=True):
                     ground_energy = i['ground_energy']
                 i['results'] = localrun.get_data(sch_file.name, bonds_file.name, restarts = restarts, ground_energy = ground_energy)
                 if not statistics:
-                    i['results'] = i['results'][i['results']['Total_Sweeps'] == i['results']['Total_Sweeps'].max()]
+                    i['results'] = i['results'].groupby(['restart']).apply(lambda d: d[d['Total_Sweeps'] == d['Total_Sweeps'].max()]).reset_index(drop=True)
     return instances
 
 # Get TTS given a temperature set and sweep count
@@ -40,7 +40,7 @@ def get_tts(instances, field_set, sweeps, restarts = 100):
     
     tts = []
     for i in instances:
-        success_prob = np.mean(np.isclose(i['ground_energy'], i['results']['E_MIN']))
+        success_prob = np.mean(np.isclose(i['ground_energy'], i['results'].groupby('restart').min()['E_MIN']))
         if not np.isclose(success_prob, 1.0):
             warnings.warn('TTS run timed out. Success probability: '+str(success_prob))
         tts.append(np.percentile(i['results']['Total_Sweeps'].max(), .99))
@@ -65,7 +65,7 @@ def fit_opt_sweeps(trials):
 # Double sweeps until the minimum TTS is included in the range
 # Fit polynomial to TTS to find optimum sweep count
 def get_opt_tts(instances, field_set, init_sweeps=128, cost=np.median):
-    return get_tts(instances, field_set, 4096, restarts=400)
+    return get_tts(instances, field_set, 4096, restarts=200)
 
 # Check whether the results are thermalized based on residual from last bin
 def check_thermalized(data, obs, threshold=.001):

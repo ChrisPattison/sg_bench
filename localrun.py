@@ -35,5 +35,7 @@ def get_data(schedule_file, instance_file, restarts=100, parallel=True, ground_e
         pool.close()
         pool.join()
 
+    for i in range(len(data)):
+        data[i]['restart'] = i
     data = pd.concat(data)
     return data
