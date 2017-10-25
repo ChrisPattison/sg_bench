@@ -59,12 +59,12 @@ def get_tts(instances, field_set, sweeps, restarts = 100):
         instance_tts = lambda t: t * np.log(1.-.99)/np.log(1.-clipped_prob(t))
 
         optimized = sp.optimize.minimize(instance_tts, unique_runtimes[1], method='TNC', bounds=[(unique_runtimes[1]+1e-4, unique_runtimes[-5])])
-        if not optimized.success:
+        if optimized.success:
+            optimal_runtime = optimized['x'][0]
+            optimal_tts = instance_tts(optimal_runtime)
+            tts.append(optimal_tts)
+	else:
             warnings.warn('Optimization for TTS failed.')
-
-        optimal_runtime = optimized['x'][0]
-        optimal_tts = instance_tts(optimal_runtime)
-        tts.append(optimal_tts)
     
     return tts
 
