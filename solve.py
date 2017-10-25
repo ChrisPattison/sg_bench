@@ -43,7 +43,28 @@ def get_tts(instances, field_set, sweeps, restarts = 100):
         success_prob = np.mean(np.isclose(i['ground_energy'], i['results'].groupby('restart').min()['E_MIN']))
         if not np.isclose(success_prob, 1.0):
             warnings.warn('TTS run timed out. Success probability: '+str(success_prob))
-        tts.append(np.percentile(i['results']['Total_Sweeps'].max(), .99))
+
+        runtimes = np.sort(np.apply_along_axis(np.asscalar, 1, i['results'].groupby('restart')['Total_Sweeps'].unique().reset_index()['Total_Sweeps'].tolist()))
+        success = np.linspace(0., 1., len(runtimes))
+        # make this shorter
+        unique_runtimes = []
+        unique_success = []
+        for i in range(len(runtimes)-1):
+            if runtimes[i] < runtimes[i+1]:
+                unique_runtimes.append(runtimes[i])
+                unique_success.append(success[i])
+
+        prob = sp.interpolate.interp1d(unique_runtimes, unique_success, kind='quadratic', bounds_error=True)
+        clipped_prob = lambda x: np.clip(prob(x), 0.0, 1.0)
+        instance_tts = lambda t: t * np.log(1.-.99)/np.log(1.-clipped_prob(t))
+
+        optimized = sp.optimize.minimize(instance_tts, unique_runtimes[1], method='TNC', bounds=[(unique_runtimes[1]+1e-4, unique_runtimes[-5])])
+        if not optimized.success:
+            warnings.warn('Optimization for TTS failed.')
+
+        optimal_runtime = optimized['x'][0]
+        optimal_tts = instance_tts(optimal_runtime)
+        tts.append(optimal_tts)
     
     return tts
 
@@ -65,7 +86,7 @@ def fit_opt_sweeps(trials):
 # Double sweeps until the minimum TTS is included in the range
 # Fit polynomial to TTS to find optimum sweep count
 def get_opt_tts(instances, field_set, init_sweeps=128, cost=np.median):
-    return get_tts(instances, field_set, 4096, restarts=200)
+    return get_tts(instances, field_set, 65536, restarts=400)
 
 # Check whether the results are thermalized based on residual from last bin
 def check_thermalized(data, obs, threshold=.001):
