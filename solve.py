@@ -6,29 +6,8 @@ import pandas as pd
 import warnings
 import tempfile
 import bondfile
+import remoterun
 import pt_propanelib as propanelib
-import localrun
-
-def run_instances(schedule, instances, restarts = 100, statistics=True):
-    with tempfile.NamedTemporaryFile('w') as sch_file:
-        # write schedule
-        sch_file.write(schedule)
-        sch_file.flush()
-
-        for i in instances:
-            with tempfile.NamedTemporaryFile('w') as bonds_file:
-                # write bond file
-                bondfile.write_bondfile(i['bonds'], bonds_file)
-                bonds_file.flush()
-                
-                # run restarts
-                ground_energy = None
-                if not statistics:
-                    ground_energy = i['ground_energy']
-                i['results'] = localrun.get_data(sch_file.name, bonds_file.name, restarts = restarts, ground_energy = ground_energy)
-                if not statistics:
-                    i['results'] = i['results'].groupby(['restart']).apply(lambda d: d[d['Total_Sweeps'] == d['Total_Sweeps'].max()]).reset_index(drop=True)
-    return instances
 
 # Get TTS given a temperature set and sweep count
 def get_tts(instances, field_set, sweeps, restarts = 100):
@@ -36,8 +15,8 @@ def get_tts(instances, field_set, sweeps, restarts = 100):
     
     # make schedule
     schedule = propanelib.make_schedule(sweeps, field_set, instances[0]['bondscale'])
-    instances = run_instances(schedule, instances, restarts, statistics=False)
-    
+    instances = remoterun.run_instances(schedule, instances, restarts, statistics=False)
+
     tts = []
     for i in instances:
         success_prob = np.mean(np.isclose(i['ground_energy'], i['results'].groupby('restart').min()['E_MIN']))
@@ -103,7 +82,7 @@ def get_observable(instances, obs, field_set, max_iterations = 3):
     sweeps = 4096
     for i in range(max_iterations):
         schedule = propanelib.make_schedule(sweeps, field_set, instances[0]['bondscale'])
-        instances = run_instances(schedule, instances, restarts = 1)
+        instances = remoterun.run_instances(schedule, instances, restarts = 1)
         # check equillibriation
         if np.all(np.vectorize(lambda i, obs: check_thermalized(i['results'], obs))(instances, obs)):
             break
