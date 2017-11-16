@@ -33,7 +33,7 @@ def extract_data(output):
 
 def make_schedule(sweeps, steps, bondscale, bins=None, beta = 10):
     beta /= bondscale
-    mc_sweeps = 1
+    mc_sweeps = 10
 
     schedule = {'sweeps':int(sweeps), 'solver_mode':True, 'uniform_init':False, \
         'schedule':[{ 'beta':beta, 'gamma':s, 'heatbath':1, 'microcanonical':mc_sweeps } for s in steps],\
