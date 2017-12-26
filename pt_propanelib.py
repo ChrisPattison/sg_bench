@@ -31,11 +31,12 @@ def extract_data(output):
     data = pd.concat(bins)
     return data
 
-def make_schedule(sweeps, steps, bondscale, bins=None, beta = 10):
+def make_schedule(sweeps, steps, bondscale, field_strength = 1.0, bins=None, beta = 10):
     beta /= bondscale
-    mc_sweeps = 10
+    field_strength *= bondscale
 
+    mc_sweeps = 10
     schedule = {'sweeps':int(sweeps), 'solver_mode':True, 'uniform_init':False, \
-        'schedule':[{ 'beta':beta, 'gamma':s, 'heatbath':1, 'microcanonical':mc_sweeps } for s in steps],\
+        'schedule':[{ 'beta':beta, 'gamma':s*field_strength, 'lambda':1.-s, 'heatbath':1, 'microcanonical':mc_sweeps } for s in steps],\
         'bin_set':([int(sweeps)/2**i for i in range(8)] if bins is None else bins)}
     return json.dumps(schedule, indent=1)

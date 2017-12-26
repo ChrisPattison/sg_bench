@@ -10,11 +10,11 @@ import remoterun
 import pt_propanelib as propanelib
 
 # Get TTS given a temperature set and sweep count
-def get_tts(instances, field_set, sweeps, restarts = 100):
+def get_tts(instances, field_set, sweeps, field_strength, restarts = 100):
     results = []
     
     # make schedule
-    schedule = propanelib.make_schedule(sweeps, field_set, instances[0]['bondscale'])
+    schedule = propanelib.make_schedule(sweeps, field_set, instances[0]['bondscale'], field_strength = field_strength)
     instances = remoterun.run_instances(schedule, instances, restarts, statistics=False)
 
     tts = []
@@ -64,8 +64,8 @@ def fit_opt_sweeps(trials):
 # Should this cost function be bootstrapped for the fit?
 # Double sweeps until the minimum TTS is included in the range
 # Fit polynomial to TTS to find optimum sweep count
-def get_opt_tts(instances, field_set, init_sweeps=128, cost=np.median):
-    return get_tts(instances, field_set, 65536, restarts=400)
+def get_opt_tts(instances, field_set, field_strength, init_sweeps=128, cost=np.median):
+    return get_tts(instances, field_set, 65536, field_strength = field_strength, restarts=400)
 
 # Check whether the results are thermalized based on residual from last bin
 def check_thermalized(data, obs, threshold=.001):
@@ -78,10 +78,10 @@ def check_thermalized(data, obs, threshold=.001):
     return True
 
 # Return observables with thermalization based on observable obs
-def get_observable(instances, obs, field_set, max_iterations = 3):
+def get_observable(instances, obs, field_set, field_strength, max_iterations = 3):
     sweeps = 4096
     for i in range(max_iterations):
-        schedule = propanelib.make_schedule(sweeps, field_set, instances[0]['bondscale'])
+        schedule = propanelib.make_schedule(sweeps, field_set, instances[0]['bondscale'], field_strength = field_strength)
         instances = remoterun.run_instances(schedule, instances, restarts = 1)
         # check equillibriation
         if np.all(np.vectorize(lambda i, obs: check_thermalized(i['results'], obs))(instances, obs)):
@@ -108,11 +108,11 @@ def get_field_set(distance, low, count, energy):
 # Optimize MC move count (NOT IMPLEMENTED)
 # Optimize temperature count
 # Get optimal TTS
-def bench_tempering(instances, field = (3, 0.1), field_count = 32, optimize_fields = True):
+def bench_tempering(instances, field = 1.0, field_count = 32, optimize_fields = True):
     print('Computing observables...')
-    field_set = np.linspace(field[0], field[1], field_count)*instances[0]['bondscale']
+    field_set = np.linspace(0.0, 1.0, field_count)*instances[0]['bondscale']
     # fit to disorder averaged E(Gamma)
-    disorder_avg = pd.concat(get_observable(instances, '<E>', field_set)).groupby(['Gamma']).mean().reset_index()
+    disorder_avg = pd.concat(get_observable(instances, '<E>', field_set, field_strength = field)).groupby(['Gamma']).mean().reset_index()
     time_per_sweep = np.median(disorder_avg['Total_Walltime']/disorder_avg['Total_Sweeps'])
     if optimize_fields:
         energy = sp.interpolate.interp1d(disorder_avg['Gamma'], disorder_avg['<E>'], kind='quadratic', bounds_error=False, fill_value='extrapolate')
@@ -123,7 +123,7 @@ def bench_tempering(instances, field = (3, 0.1), field_count = 32, optimize_fiel
         field_set = get_field_set(temp_seperation, field_set[-1], field_count, energy)
         print(field_set)
     print('Benchmarking...')
-    return get_opt_tts(instances, field_set), time_per_sweep
+    return get_opt_tts(instances, field_set, field_strength = field), time_per_sweep
 
 
 
