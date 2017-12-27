@@ -118,7 +118,7 @@ def get_beta_set(distance, low, count, energy):
 # Get optimal TTS
 def bench_tempering(instances, beta, temp_count, field_strength, profile, optimize_temp = True):
     print('Computing observables...')
-    beta_set = np.linspace(beta[0], beta[1], temp_count)*instances[0]['bondscale']
+    beta_set = np.linspace(beta[0], beta[1], temp_count)
     # fit to disorder averaged E(Beta)
     disorder_avg = pd.concat(get_observable(instances, '<E>', beta_set, profile, field_strength = field_strength)).groupby(['Beta']).mean().reset_index()
     time_per_sweep = np.median(disorder_avg['Total_Walltime']/disorder_avg['Total_Sweeps'])

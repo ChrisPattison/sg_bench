@@ -27,7 +27,7 @@ def extract_data(output):
     # remove empty lines
     lines = [l for l in lines if len(l)]
     # reassemble in buffer
-    buff = io.StringIO(unicode('\n'.join(lines)))
+    buff = io.StringIO('\n'.join(lines))
     buff.seek(0)
     data = pd.read_csv(buff, delim_whitespace=True)
     return data
