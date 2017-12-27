@@ -36,7 +36,7 @@ def run_restart(schedule, instance, ground_energy = None): # schedule, instance
 
 def run_instances(schedule, instances, restarts=400, statistics=True):
     cluster = dispy.JobCluster(run_restart, depends=[bondfile, propanelib, pt_propanelib], \
-        loglevel=dispy.logger.WARN, pulse_interval=2, reentrant=True, ping_interval=1)
+        loglevel=dispy.logger.CRITICAL, pulse_interval=2, reentrant=True, ping_interval=1)
     for i in instances:
         ground_energy = None if statistics else i['ground_energy']
 
