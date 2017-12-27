@@ -25,20 +25,18 @@ def run_restart(schedule, instance, ground_energy = None): # schedule, instance
             # Optional ground state energy specification
             if ground_energy is not None:
                 command.extend(['-p', str(ground_energy)])
-            try:
-                output = subprocess.check_output(command, universal_newlines=True)
-                output = output.split('\n')
-                restart_data = pt_propanelib.extract_data(output)
-            # Catch misc errors
-            except subprocess.CalledProcessError as e:
-                print(e)
-                print(e.output)
-            except Exception as e:
-                print(e)
+
+            output = subprocess.check_output(command, universal_newlines=True)
+            if 'returned non-zero exit status' in output:
+                raise RuntimeException(output)
+            output = output.split('\n')
+
+            restart_data = pt_propanelib.extract_data(output)
     return restart_data
 
 def run_instances(schedule, instances, restarts=400, statistics=True):
-    cluster = dispy.JobCluster(run_restart, nodes=['tempeh.tamu.edu'], depends=[bondfile, propanelib, pt_propanelib], loglevel=dispy.logger.CRITICAL)
+    cluster = dispy.JobCluster(run_restart, depends=[bondfile, propanelib, pt_propanelib], \
+        loglevel=dispy.logger.WARN, pulse_interval=2, reentrant=True, ping_interval=1)
     for i in instances:
         ground_energy = None if statistics else i['ground_energy']
 
@@ -54,6 +52,7 @@ def run_instances(schedule, instances, restarts=400, statistics=True):
             if job.exception is not None:
                 print(job.exception)
         i['results'] = [job() for job in i['results']]
+        # print(i['results'])
         for index, df in enumerate(i['results']):
             df['restart'] = index
         i['results'] = pd.concat(i['results'])

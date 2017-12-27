@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 import bondfile
 import pa_propanelib
 import pandas as pd
@@ -8,6 +8,7 @@ import io
 import sys
 import tempfile
 import multiprocessing
+import io
 
 # Creates and solves for the ground state of some spin glass instances given a template bondfile
 
@@ -36,7 +37,7 @@ def main():
             instance['J_ij'] = [np.random.normal() for i in instance['J_ij']]
 
             instance_file = sys.argv[1]+'.'+str(n)
-            with open(instance_file, 'w') as bonds:
+            with io.open(instance_file, 'w') as bonds:
                 bondfile.write_bondfile(instance, bonds)
             results.append(pool.apply_async(pa_propanelib.run_restart(sch_file.name, instance_file)))
 

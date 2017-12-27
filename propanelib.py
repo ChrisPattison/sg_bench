@@ -6,8 +6,11 @@ import io
 magic = '%%%---%%%'
 comment = '#'
 histstart = '|'
+config_parse_error = 'Config parsing failed.'
 
 def extract_data(output):
+    if config_parse_error in ''.join(output):
+        raise RuntimeError('Solver failed to parse input config')
     split = 0
     # find magic string
     for num, l in enumerate(output, 0):

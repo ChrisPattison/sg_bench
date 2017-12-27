@@ -10,11 +10,15 @@ import remoterun
 import pt_propanelib as propanelib
 
 # Get TTS given a temperature set and sweep count
-def get_tts(instances, field_set, sweeps, field_strength, restarts = 100):
+def get_tts(instances, beta_set, profile, sweeps, field_strength, restarts = 100):
     results = []
     
     # make schedule
-    schedule = propanelib.make_schedule(sweeps, field_set, instances[0]['bondscale'], field_strength = field_strength)
+    schedule = propanelib.make_schedule( \
+            sweeps = sweeps, \
+            beta_set = beta_set, \
+            profile = profile, \
+            field_strength = field_strength)
     instances = remoterun.run_instances(schedule, instances, restarts, statistics=False)
 
     tts = []
@@ -42,7 +46,7 @@ def get_tts(instances, field_set, sweeps, field_strength, restarts = 100):
             optimal_runtime = optimized['x'][0]
             optimal_tts = instance_tts(optimal_runtime)
             tts.append(optimal_tts)
-	else:
+    else:
             warnings.warn('Optimization for TTS failed.')
     
     return tts
@@ -64,12 +68,12 @@ def fit_opt_sweeps(trials):
 # Should this cost function be bootstrapped for the fit?
 # Double sweeps until the minimum TTS is included in the range
 # Fit polynomial to TTS to find optimum sweep count
-def get_opt_tts(instances, field_set, field_strength, init_sweeps=128, cost=np.median):
-    return get_tts(instances, field_set, 65536, field_strength = field_strength, restarts=400)
+def get_opt_tts(instances, beta_set, profile, field_strength, cost=np.median):
+    return get_tts(instances, beta_set, profile, 65536, field_strength, restarts=400)
 
 # Check whether the results are thermalized based on residual from last bin
 def check_thermalized(data, obs, threshold=.001):
-    for name, group in data.groupby(['Gamma']):
+    for name, group in data.groupby(['Beta']):
         sorted_group = group.sort_values(['Samples'])
         residual = np.abs(sorted_group.iloc[-1][obs] - sorted_group.iloc[-2][obs])/np.mean(sorted_group.iloc[-2:][obs])
         if(residual > threshold):
@@ -78,10 +82,14 @@ def check_thermalized(data, obs, threshold=.001):
     return True
 
 # Return observables with thermalization based on observable obs
-def get_observable(instances, obs, field_set, field_strength, max_iterations = 3):
+def get_observable(instances, obs, beta_set, profile, field_strength, max_iterations = 3):
     sweeps = 4096
     for i in range(max_iterations):
-        schedule = propanelib.make_schedule(sweeps, field_set, instances[0]['bondscale'], field_strength = field_strength)
+        schedule = propanelib.make_schedule( \
+            sweeps = sweeps, \
+            beta_set = beta_set, \
+            profile = profile, \
+            field_strength = field_strength)
         instances = remoterun.run_instances(schedule, instances, restarts = 1)
         # check equillibriation
         if np.all(np.vectorize(lambda i, obs: check_thermalized(i['results'], obs))(instances, obs)):
@@ -93,37 +101,37 @@ def get_observable(instances, obs, field_set, field_strength, max_iterations = 3
         print('Using '+str(sweeps)+' sweeps')
     return [i['results'][i['results']['Samples']==i['results']['Samples'].max()] for i in instances]
 
-def get_field_set(distance, low, count, energy):
-    fields = [low]
+def get_beta_set(distance, low, count, energy):
+    betas = [low]
     for i in range(count-1):
-        cost = lambda x: ((fields[-1] - x)*(energy(fields[-1]) - energy(x)) - distance)**2
+        cost = lambda x: ((betas[-1] - x)*(energy(betas[-1]) - energy(x)) - distance)**2
         # Bias in starting value to get the positive increment
-        next_field = sp.optimize.minimize(cost, [fields[-1]+0.1], options={'gtol':1e-10})
-        fields.append(next_field['x'][0])
-    assert(np.all((np.ediff1d(fields) * np.ediff1d(energy(fields)) - distance) < (distance * 1e-5))) # residual check
-    return fields
+        next_field = sp.optimize.minimize(cost, [betas[-1]+0.1], options={'gtol':1e-10})
+        betas.append(next_field['x'][0])
+    assert(np.all((np.ediff1d(betas) * np.ediff1d(energy(betas)) - distance) < (distance * 1e-5))) # residual check
+    return betas
 
-# Disorder average <E>(Gamma)
+# Disorder average <E>(Beta)
 # Fit temperatures to make dEd1/T constant
 # Optimize MC move count (NOT IMPLEMENTED)
 # Optimize temperature count
 # Get optimal TTS
-def bench_tempering(instances, field = 1.0, field_count = 32, optimize_fields = True):
+def bench_tempering(instances, beta, temp_count, field_strength, profile, optimize_temp = True):
     print('Computing observables...')
-    field_set = np.linspace(0.0, 1.0, field_count)*instances[0]['bondscale']
-    # fit to disorder averaged E(Gamma)
-    disorder_avg = pd.concat(get_observable(instances, '<E>', field_set, field_strength = field)).groupby(['Gamma']).mean().reset_index()
+    beta_set = np.linspace(beta[0], beta[1], temp_count)*instances[0]['bondscale']
+    # fit to disorder averaged E(Beta)
+    disorder_avg = pd.concat(get_observable(instances, '<E>', beta_set, profile, field_strength = field_strength)).groupby(['Beta']).mean().reset_index()
     time_per_sweep = np.median(disorder_avg['Total_Walltime']/disorder_avg['Total_Sweeps'])
-    if optimize_fields:
-        energy = sp.interpolate.interp1d(disorder_avg['Gamma'], disorder_avg['<E>'], kind='quadratic', bounds_error=False, fill_value='extrapolate')
+    if optimize_temp:
+        energy = sp.interpolate.interp1d(disorder_avg['Beta'], disorder_avg['<E>'], kind='quadratic', bounds_error=False, fill_value='extrapolate')
 
         print('Computing field set...')
-        residual = lambda k: (np.max(get_field_set(k[0], field_set[-1], field_count, energy)) - field_set[0])**2
-        temp_seperation = sp.optimize.minimize(residual, [(np.max(field_set) - np.min(field_set))/field_count], method='CG', options={'gtol':1e-4, 'eps':1e-6})['x'][0]
-        field_set = get_field_set(temp_seperation, field_set[-1], field_count, energy)
-        print(field_set)
+        residual = lambda k: (np.max(get_beta_set(k[0], beta_set[-1], temp_count, energy)) - beta_set[0])**2
+        temp_seperation = sp.optimize.minimize(residual, [(np.max(beta_set) - np.min(beta_set))/temp_count], method='CG', options={'gtol':1e-4, 'eps':1e-6})['x'][0]
+        beta_set = get_beta_set(temp_seperation, beta_set[-1], temp_count, energy)
+        print(beta_set)
     print('Benchmarking...')
-    return get_opt_tts(instances, field_set, field_strength = field), time_per_sweep
+    return get_opt_tts(instances, beta_set, profile, field_strength), time_per_sweep
 
 
 
