@@ -57,7 +57,6 @@ class localrun:
                 i['results'].append(pool.apply_async(run_restart, args=(schedule, i_copy, ground_energy)))
 
         for i in instances:
-            print(i['results'][0].get())
             i['results'] = [job.get() for job in i['results']]
             # print(i['results'])
             for index, df in enumerate(i['results']):
