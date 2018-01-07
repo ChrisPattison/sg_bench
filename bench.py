@@ -5,6 +5,7 @@ import solve
 import numpy as np
 import json
 import io
+import pathlib
 
 def bench(optimize_temp = True):
     if np.any(['-h' in s for s in sys.argv]) or len(sys.argv) < 2:
@@ -27,12 +28,14 @@ bench.py <configuration>
         quit()
 
 
+    config_path = pathlib.Path(sys.argv[1])
     config = {}
-    with io.open(sys.argv[1], 'r') as config_file:
+    with io.open(str(config_path.resolve()), 'r') as config_file:
         config = json.load(config_file)
 
-    print('Loading instances from '+config['instances'])
-    instances = instance.get_size(config['instances'])
+    instance_path = config_path.parents[0] / config['instances']
+    print('Loading instances from '+str(instance_path.resolve()))
+    instances = instance.get_size(str(instance_path.resolve()))
     print('Solving...')
     tts = solve.bench_tempering(instances,\
         beta = (config['beta']['min'], config['beta']['max']), \
