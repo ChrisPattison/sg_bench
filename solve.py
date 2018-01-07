@@ -6,7 +6,7 @@ import pandas as pd
 import warnings
 import tempfile
 import bondfile
-import remoterun
+import backend
 import pt_propanelib as propanelib
 
 # Get TTS given a temperature set and sweep count
@@ -19,7 +19,7 @@ def get_tts(instances, beta_set, profile, sweeps, field_strength, restarts = 100
             beta_set = beta_set, \
             profile = profile, \
             field_strength = field_strength)
-    instances = remoterun.run_instances(schedule, instances, restarts, statistics=False)
+    instances = backend.get_backend().run_instances(schedule, instances, restarts, statistics=False)
 
     tts = []
     for i in instances:
@@ -90,7 +90,7 @@ def get_observable(instances, obs, beta_set, profile, field_strength, max_iterat
             beta_set = beta_set, \
             profile = profile, \
             field_strength = field_strength)
-        instances = remoterun.run_instances(schedule, instances, restarts = 1)
+        instances = backend.get_backend().run_instances(schedule, instances, restarts = 1)
         # check equillibriation
         if np.all(np.vectorize(lambda i, obs: check_thermalized(i['results'], obs))(instances, obs)):
             break
