@@ -8,6 +8,7 @@ import dispy
 import bondfile
 import propanelib
 import pt_propanelib
+# psutil
 
 def run_restart(schedule, instance, ground_energy = None): # schedule, instance
     import bondfile
@@ -44,9 +45,19 @@ def get_backend(dispyconf = None):
         return localrun()
 
 class localrun:
+    def __init__(self):
+        cores = -1
+        # Attempt to find out the number of physical cores using psutil
+        try:
+            import psutil
+            cores = psutil.cpu_count(logical=False)
+        except ImportError:
+            cores = multiprocessing.cpu_count()
+        self._cores = cores
+
     def run_instances(self, schedule, instances, restarts, statistics=True):
 
-        pool = multiprocessing.Pool()
+        pool = multiprocessing.Pool(self._cores)
         for i in instances:
             ground_energy = None if statistics else i['ground_energy']
 
