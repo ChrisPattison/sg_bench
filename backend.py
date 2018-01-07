@@ -44,7 +44,7 @@ def get_backend(dispyconf = None):
         return localrun()
 
 class localrun:
-    def run_instances(self, schedule, instances, restarts=400, statistics=True):
+    def run_instances(self, schedule, instances, restarts, statistics=True):
 
         pool = multiprocessing.Pool()
         for i in instances:
@@ -75,7 +75,7 @@ class remoterun:
             loglevel=dispy.logger.CRITICAL, pulse_interval=2, reentrant=True, ping_interval=1,
             ext_ip_addr=self._dispyconf['ext_ip_addr'], nodes=self._dispyconf['nodes'])
     
-    def run_instances(self, schedule, instances, restarts=400, statistics=True):
+    def run_instances(self, schedule, instances, restarts, statistics=True):
         
         for i in instances:
             ground_energy = None if statistics else i['ground_energy']

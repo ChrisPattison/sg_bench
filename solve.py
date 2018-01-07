@@ -10,7 +10,7 @@ import backend
 import pt_propanelib as propanelib
 
 # Get TTS given a temperature set and sweep count
-def get_tts(instances, beta_set, profile, sweeps, field_strength, restarts = 100):
+def get_tts(instances, beta_set, profile, sweeps, field_strength, restarts):
     results = []
     
     # make schedule
@@ -68,8 +68,8 @@ def fit_opt_sweeps(trials):
 # Should this cost function be bootstrapped for the fit?
 # Double sweeps until the minimum TTS is included in the range
 # Fit polynomial to TTS to find optimum sweep count
-def get_opt_tts(instances, beta_set, profile, field_strength, cost=np.median):
-    return get_tts(instances, beta_set, profile, 65536, field_strength, restarts=400)
+def get_opt_tts(instances, beta_set, profile, field_strength, restarts, cost=np.median):
+    return get_tts(instances, beta_set, profile, 65536, field_strength, restarts=restarts)
 
 # Check whether the results are thermalized based on residual from last bin
 def check_thermalized(data, obs, threshold=.001):
@@ -116,7 +116,7 @@ def get_beta_set(distance, low, count, energy):
 # Optimize MC move count (NOT IMPLEMENTED)
 # Optimize temperature count
 # Get optimal TTS
-def bench_tempering(instances, beta, temp_count, field_strength, profile, optimize_temp = True):
+def bench_tempering(instances, beta, temp_count, field_strength, profile, optimize_temp = True, restarts = 400):
     print('Computing observables...')
     beta_set = np.linspace(beta[0], beta[1], temp_count)
     # fit to disorder averaged E(Beta)
@@ -131,7 +131,7 @@ def bench_tempering(instances, beta, temp_count, field_strength, profile, optimi
         beta_set = get_beta_set(temp_seperation, beta_set[-1], temp_count, energy)
         print(beta_set)
     print('Benchmarking...')
-    return get_opt_tts(instances, beta_set, profile, field_strength), time_per_sweep
+    return get_opt_tts(instances, beta_set, profile, field_strength, restarts=restarts), time_per_sweep
 
 
 

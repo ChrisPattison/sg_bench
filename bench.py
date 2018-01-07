@@ -39,6 +39,7 @@ bench.py <configuration>
         temp_count = config['beta']['count'], \
         field_strength = config['field_strength'], \
         profile = config['profile'], \
+        restarts = config.get('restarts', 100), \
         optimize_temp = optimize_temp)
     print(tts[0])
     print(tts[1])
