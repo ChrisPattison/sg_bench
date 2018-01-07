@@ -5,38 +5,12 @@ import copy
 import bondfile
 import propanelib
 import pt_propanelib
+import localrun
 
-def run_restart(schedule, instance, ground_energy = None): # schedule, instance
-    import bondfile
-    import pt_propanelib
-
-    with tempfile.NamedTemporaryFile('w') as schedule_file:
-        # Write schedule
-        schedule_file.write(schedule)
-        schedule_file.flush()
-        with tempfile.NamedTemporaryFile('w') as bonds_file:
-            # Write bondfile
-            bondfile.write_bondfile(instance['bonds'], bonds_file)
-            bonds_file.flush()
-
-            # Run solver
-            restart_data = []
-            command = ['propane_ptsvmc', '-m', 'pt', schedule_file.name, bonds_file.name]
-            # Optional ground state energy specification
-            if ground_energy is not None:
-                command.extend(['-p', str(ground_energy)])
-
-            output = subprocess.check_output(command, universal_newlines=True)
-            if 'returned non-zero exit status' in output:
-                raise RuntimeException(output)
-            output = output.split('\n')
-
-            restart_data = pt_propanelib.extract_data(output)
-    return restart_data
-
-def run_instances(schedule, instances, restarts=400, statistics=True):
-    cluster = dispy.JobCluster(run_restart, depends=[bondfile, propanelib, pt_propanelib], \
-        loglevel=dispy.logger.CRITICAL, pulse_interval=2, reentrant=True, ping_interval=1)
+def run_instances(schedule, instances, dispyconf, restarts=400, statistics=True):
+    cluster = dispy.JobCluster(localrun.run_restart, depends=[bondfile, propanelib, pt_propanelib], \
+        loglevel=dispy.logger.CRITICAL, pulse_interval=2, reentrant=True, ping_interval=1,
+        ext_ip_addr=dispyconf['ext_ip_addr'], nodes=dispyconf['nodes'])
     for i in instances:
         ground_energy = None if statistics else i['ground_energy']
 
