@@ -84,13 +84,14 @@ def check_thermalized(data, obs, threshold=.001):
 # Return observables with thermalization based on observable obs
 def get_observable(instances, obs, beta_set, profile, field_strength, max_iterations = 3):
     sweeps = 4096
+    solver = backend.get_backend()
     for i in range(max_iterations):
         schedule = propanelib.make_schedule( \
             sweeps = sweeps, \
             beta_set = beta_set, \
             profile = profile, \
             field_strength = field_strength)
-        instances = backend.get_backend().run_instances(schedule, instances, restarts = 1)
+        instances = solver.run_instances(schedule, instances, restarts = 1)
         # check equillibriation
         if np.all(np.vectorize(lambda i, obs: check_thermalized(i['results'], obs))(instances, obs)):
             break
