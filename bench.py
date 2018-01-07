@@ -35,7 +35,7 @@ bench.py <configuration>
 
     instance_path = config_path.parents[0] / config['instances']
     print('Loading instances from '+str(instance_path.resolve()))
-    instances = instance.get_size(str(instance_path.resolve()))
+    instances = instance.get_instance_set(str(instance_path.resolve()))
     print('Solving...')
     tts = solve.bench_tempering(instances,\
         beta = (config['beta']['min'], config['beta']['max']), \
