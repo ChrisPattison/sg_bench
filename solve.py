@@ -41,7 +41,7 @@ def get_tts(instances, beta_set, profile, sweeps, field_strength, restarts):
         clipped_prob = lambda x: np.clip(prob(x), 0.0, 1.0)
         instance_tts = lambda t: t * np.log(1.-.99)/np.log(1.-clipped_prob(t))
 
-        optimized = sp.optimize.minimize(instance_tts, unique_runtimes[1], method='TNC', bounds=[(unique_runtimes[1]+1e-4, unique_runtimes[-1]-1e-4)])
+        optimized = sp.optimize.minimize(instance_tts, np.median(unique_runtimes), method='TNC', bounds=[(unique_runtimes[1]+1e-4, unique_runtimes[-1]-1e-4)])
         if optimized.success:
             optimal_runtime = optimized['x'][0]
             optimal_tts = instance_tts(optimal_runtime)
