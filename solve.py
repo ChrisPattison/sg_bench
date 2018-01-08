@@ -102,14 +102,21 @@ def get_observable(instances, obs, beta_set, profile, field_strength, max_iterat
         print('Using '+str(sweeps)+' sweeps')
     return [i['results'][i['results']['Samples']==i['results']['Samples'].max()] for i in instances]
 
+# Given a particular step and a starting temperature, uniformly place temperatures
 def get_beta_set(distance, low, count, energy):
     betas = [low]
     for i in range(count-1):
-        cost = lambda x: ((betas[-1] - x)*(energy(betas[-1]) - energy(x)) - distance)**2
-        # Bias in starting value to get the positive increment
-        next_field = sp.optimize.minimize(cost, [betas[-1]+0.1], options={'gtol':1e-10})
-        betas.append(next_field['x'][0])
-    assert(np.all((np.ediff1d(betas) * np.ediff1d(energy(betas)) - distance) < (distance * 1e-5))) # residual check
+        cost = lambda x: ((betas[-1] - x)*np.abs(energy(betas[-1]) - energy(x)) - distance)
+        for i in range(5):
+            # Bias in starting value to get the positive incremen
+            next_temp = sp.optimize.root(cost, betas[-1]+np.random.uniform(0,2) , tol=1e-7)
+            if next_temp['success']:
+                break
+            else:
+                print(betas, next_temp['x'][0])
+        assert(next_temp['success'])
+        betas.append(next_temp['x'][0])
+        assert(betas[-1] > betas[-2])
     return betas
 
 # Disorder average <E>(Beta)
@@ -118,18 +125,22 @@ def get_beta_set(distance, low, count, energy):
 # Optimize temperature count
 # Get optimal TTS
 def bench_tempering(instances, beta, temp_count, field_strength, profile, optimize_temp = True, restarts = 400):
+    beta_min = np.min(beta)
+    beta_max = np.max(beta)
     print('Computing observables...')
-    beta_set = np.linspace(beta[0], beta[1], temp_count)
+    beta_set = np.linspace(beta_min, beta_max, temp_count)
     # fit to disorder averaged E(Beta)
     disorder_avg = pd.concat(get_observable(instances, '<E>', beta_set, profile, field_strength = field_strength)).groupby(['Beta']).mean().reset_index()
     time_per_sweep = np.median(disorder_avg['Total_Walltime']/disorder_avg['Total_Sweeps'])
     if optimize_temp:
-        energy = sp.interpolate.interp1d(disorder_avg['Beta'], disorder_avg['<E>'], kind='quadratic', bounds_error=False, fill_value='extrapolate')
+        energy = sp.interpolate.interp1d(disorder_avg['Beta'], disorder_avg['<E>'], kind='linear', bounds_error=False, fill_value='extrapolate')
 
         print('Computing field set...')
-        residual = lambda k: (np.max(get_beta_set(k[0], beta_set[-1], temp_count, energy)) - beta_set[0])**2
-        temp_seperation = sp.optimize.minimize(residual, [(np.max(beta_set) - np.min(beta_set))/temp_count], method='CG', options={'gtol':1e-4, 'eps':1e-6})['x'][0]
-        beta_set = get_beta_set(temp_seperation, beta_set[-1], temp_count, energy)
+        # select step such that the final temperature is the one desired
+        residual = lambda step: get_beta_set(step, beta_min, temp_count, energy)[-1] - beta_max
+        init_step = -(disorder_avg['<E>'].max() - disorder_avg['<E>'].min())*(disorder_avg['Beta'].max() - disorder_avg['Beta'].min())
+        step = sp.optimize.bisect(residual, init_step*1e-5, init_step)
+        beta_set = get_beta_set(step, beta_min, temp_count, energy)
         print(beta_set)
     print('Benchmarking...')
     return get_opt_tts(instances, beta_set, profile, field_strength, restarts=restarts), time_per_sweep
