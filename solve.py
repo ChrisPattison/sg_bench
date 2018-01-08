@@ -37,16 +37,16 @@ def get_tts(instances, beta_set, profile, sweeps, field_strength, restarts):
                 unique_runtimes.append(runtimes[i])
                 unique_success.append(success[i])
 
-        prob = sp.interpolate.interp1d(unique_runtimes, unique_success, kind='quadratic', bounds_error=True)
+        prob = sp.interpolate.interp1d(unique_runtimes, unique_success, kind='linear', bounds_error=True)
         clipped_prob = lambda x: np.clip(prob(x), 0.0, 1.0)
         instance_tts = lambda t: t * np.log(1.-.99)/np.log(1.-clipped_prob(t))
 
-        optimized = sp.optimize.minimize(instance_tts, unique_runtimes[1], method='TNC', bounds=[(unique_runtimes[1]+1e-4, unique_runtimes[-5])])
+        optimized = sp.optimize.minimize(instance_tts, unique_runtimes[1], method='TNC', bounds=[(unique_runtimes[1]+1e-4, unique_runtimes[-1]-1e-4)])
         if optimized.success:
             optimal_runtime = optimized['x'][0]
             optimal_tts = instance_tts(optimal_runtime)
             tts.append(optimal_tts)
-    else:
+        else:
             warnings.warn('Optimization for TTS failed.')
     
     return tts
