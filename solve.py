@@ -119,6 +119,17 @@ def get_beta_set(distance, low, count, energy):
         assert(betas[-1] > betas[-2])
     return betas
 
+# Selects a dB*dE step such that the final temperature is the one desired
+def get_optimized_temps(disorder_avg, beta_min, beta_max, temp_count):
+    print('Computing temp set...')
+    # fit to disorder averaged E(Beta)
+    energy = sp.interpolate.interp1d(disorder_avg['Beta'], disorder_avg['<E>'], kind='linear', bounds_error=False, fill_value='extrapolate')
+    residual = lambda step: get_beta_set(step, beta_min, temp_count, energy)[-1] - beta_max
+    init_step = -(disorder_avg['<E>'].max() - disorder_avg['<E>'].min())*(disorder_avg['Beta'].max() - disorder_avg['Beta'].min())
+    step = sp.optimize.bisect(residual, init_step*1e-5, init_step)
+    beta_set = get_beta_set(step, beta_min, temp_count, energy)
+    return beta_set
+
 # Disorder average <E>(Beta)
 # Fit temperatures to make dEd1/T constant
 # Optimize MC move count (NOT IMPLEMENTED)
@@ -129,18 +140,10 @@ def bench_tempering(instances, beta, temp_count, field_strength, profile, optimi
     beta_max = np.max(beta)
     print('Computing observables...')
     beta_set = np.linspace(beta_min, beta_max, temp_count)
-    # fit to disorder averaged E(Beta)
     disorder_avg = pd.concat(get_observable(instances, '<E>', beta_set, profile, field_strength = field_strength)).groupby(['Beta']).mean().reset_index()
     time_per_sweep = np.median(disorder_avg['Total_Walltime']/disorder_avg['Total_Sweeps'])
     if optimize_temp:
-        energy = sp.interpolate.interp1d(disorder_avg['Beta'], disorder_avg['<E>'], kind='linear', bounds_error=False, fill_value='extrapolate')
-
-        print('Computing field set...')
-        # select step such that the final temperature is the one desired
-        residual = lambda step: get_beta_set(step, beta_min, temp_count, energy)[-1] - beta_max
-        init_step = -(disorder_avg['<E>'].max() - disorder_avg['<E>'].min())*(disorder_avg['Beta'].max() - disorder_avg['Beta'].min())
-        step = sp.optimize.bisect(residual, init_step*1e-5, init_step)
-        beta_set = get_beta_set(step, beta_min, temp_count, energy)
+        beta_set = get_optimized_temps(disorder_avg, beta_min, beta_max, temp_count)
         print(beta_set)
     print('Benchmarking...')
     return get_opt_tts(instances, beta_set, profile, field_strength, restarts=restarts), time_per_sweep
