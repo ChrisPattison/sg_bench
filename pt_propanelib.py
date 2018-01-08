@@ -19,6 +19,7 @@ def extract_data(output):
             upper = binned
             lower = binned.shift(1)
             binned_values = (upper.mul(upper['Samples'], axis='index') - lower.mul(lower['Samples'], axis='index')).div(upper['Samples'] - lower['Samples'], axis='index')
+            binned_values['Samples'] = upper['Samples'] - lower['Samples']
             binned.iloc[1:] = binned_values.iloc[1:]
             
             binned.loc[binned.index[1:], 'Binned'] = True
