@@ -4,51 +4,47 @@ import scipy.interpolate
 import scipy.optimize
 import pandas as pd
 import warnings
-import tempfile
 import bondfile
 import backend
 import pt_propanelib
 
-# Note: the notation in this class is that temp = B = 1/T
 class solve:
     def __init__(self, config):
         self._machine_readable = config['machine_readable']
 
-        self._beta_max = config['beta']['max']
-        self._beta_min = config['beta']['min']
-        self._temp_count = config['beta']['count']
+        self._field_max = config['field']['max']
+        self._field_min = config['field']['min']
+        self._field_count = config['field']['count']
 
-        self._profile = config['profile']
-        self._field_strength = config.get('field_strength', 1.0)
+        self._beta = config.get('beta', 10.0)
 
         self._restarts = config.get('bench_restarts', 100)
         self._sweep_timeout = config.get('sweep_timeout', 65536)
-        self._optimize_temps = config.get('optimize_temps', False)
+        self._optimize_fields = config.get('optimize_fields', False)
         self._observable_sweeps = config.get('observable_sweeps', 4096)
         self._observable_timeout = config.get('observable_timeout', 3)
         self._thermalize_threshold = config.get('thermalize_threshold', 1e-3)
 
-        self._detailed_log = {'field_strength':self._field_strength, 'profile':self._profile}
+        self._detailed_log = {'beta':self._beta}
 
     def _output(self, string):
         if not self._machine_readable:
             print(string)
 
-    def _get_initial_temp_set(self):
-        return np.linspace(self._beta_min, self._beta_max, self._temp_count)
+    def _get_initial_field_set(self):
+        return np.linspace(self._field_min, self._field_max, self._field_count)
 
-    def _make_schedule(self, sweeps, beta_set = None):
+    def _make_schedule(self, sweeps, field_set = None):
         return pt_propanelib.make_schedule( \
                 sweeps = sweeps, \
-                beta_set = beta_set if beta_set else self._get_initial_temp_set(), \
-                profile = self._profile, \
-                field_strength = self._field_strength)
+                field_set = field_set if field_set else self._get_initial_field_set(), \
+                beta = self._beta)
 
-    # Get TTS given a temperature set and sweep count
-    def _get_tts(self, instances, beta_set, cost = np.median):
+    # Get TTS given a field set and sweep count
+    def _get_tts(self, instances, field_set, cost = np.median):
         results = []
         
-        schedule = self._make_schedule(sweeps = self._sweep_timeout, beta_set = beta_set)
+        schedule = self._make_schedule(sweeps = self._sweep_timeout, field_set = field_set)
         instances = backend.get_backend().run_instances(schedule, instances, self._restarts, statistics=False)
 
         tts = []
@@ -96,7 +92,7 @@ class solve:
 
     # Check whether the results are thermalized based on residual from last bin
     def _check_thermalized(self, data, obs):
-        for name, group in data.groupby(['Beta']):
+        for name, group in data.groupby(['Gamma']):
             sorted_group = group.sort_values(['Samples'])
             residual = np.abs(sorted_group.iloc[-1][obs] - sorted_group.iloc[-2][obs])/np.mean(sorted_group.iloc[-2:][obs])
             if(residual > self._thermalize_threshold):
@@ -105,10 +101,11 @@ class solve:
         return True
 
     # Return observables with thermalization based on observable obs
-    def _get_observable(self, instances, obs, beta_set):
+    def _get_observable(self, instances, obs, field_set):
         solver = backend.get_backend()
         for i in range(self._observable_timeout):
-            schedule = self._make_schedule(sweeps = self._observable_sweeps, beta_set = beta_set)
+            sweeps = self._observable_sweeps
+            schedule = self._make_schedule(sweeps = sweeps, field_set = field_set)
             instances = solver.run_instances(schedule, instances, restarts = 1)
             # check equillibriation
             if np.all(np.vectorize(lambda i, obs: self._check_thermalized(i['results'], obs))(instances, obs)):
@@ -120,63 +117,63 @@ class solve:
             self._output('Using '+str(sweeps)+' sweeps')
         return [i['results'][i['results']['Samples']==i['results']['Samples'].max()] for i in instances]
 
-    def _get_disorder_avg(self, instances, obs, beta_set):
-        return pd.concat(self._get_observable(instances, '<E>', beta_set)).groupby(['Beta']).mean().reset_index()
+    def _get_disorder_avg(self, instances, obs, field_set):
+        return pd.concat(self._get_observable(instances, '<E>', field_set)).groupby(['Gamma']).mean().reset_index()
 
 
-    # Given a particular step and a starting temperature, uniformly place temperatures
-    def _get_temp_set(self, distance, energy):
-        betas = [self._beta_min]
-        for i in range(self._temp_count-1):
-            cost = lambda x: ((betas[-1] - x)*np.abs(energy(betas[-1]) - energy(x)) - distance)
+    # Given a particular step and a starting field, uniformly place fields
+    def _get_field_set(self, distance, energy):
+        fields = [self._field_min]
+        for i in range(self._field_count-1):
+            cost = lambda x: ((fields[-1] - x)*np.abs(energy(fields[-1]) - energy(x)) - distance)
             for i in range(5):
                 # Bias in starting value to get the positive incremen
-                next_temp = sp.optimize.root(cost, betas[-1]+np.random.uniform(0,2) , tol=1e-7)
-                if next_temp['success']:
+                next_field = sp.optimize.root(cost, fields[-1]+np.random.uniform(0,2) , tol=1e-7)
+                if next_field['success']:
                     break
-            assert(next_temp['success'])
-            betas.append(next_temp['x'][0])
-            assert(betas[-1] > betas[-2])
-        return betas
+            assert(next_field['success'])
+            fields.append(next_field['x'][0])
+            assert(fields[-1] > fields[-2])
+        return fields
 
-    # Selects a dB*dE step such that the final temperature is the one desired
-    def _get_optimized_temps(self, disorder_avg):
-        _output('Computing temp set...')
-        # fit to disorder averaged E(Beta)
-        energy = sp.interpolate.interp1d(disorder_avg['Beta'], disorder_avg['<E>'], kind='linear', bounds_error=False, fill_value='extrapolate')
-        residual = lambda step: self._get_temp_set(step, energy)[-1] - self._beta_max
-        init_step = -(disorder_avg['<E>'].max() - disorder_avg['<E>'].min())*(disorder_avg['Beta'].max() - disorder_avg['Beta'].min())
+    # Selects a dT*dE step such that the final field is the one desired
+    def _get_optimized_fields(self, disorder_avg):
+        self._output('Computing field set...')
+        # fit to disorder averaged E(field)
+        energy = sp.interpolate.interp1d(disorder_avg['Gamma'], disorder_avg['<E>'], kind='linear', bounds_error=False, fill_value='extrapolate')
+        residual = lambda step: self._get_field_set(step, energy)[-1] - self._field_max
+        init_step = -(disorder_avg['<E>'].max() - disorder_avg['<E>'].min())*(disorder_avg['Gamma'].max() - disorder_avg['Gamma'].min())
         step = sp.optimize.bisect(residual, init_step*1e-5, init_step)
-        beta_set = _get_temp_set(step, energy)
+        field_set = self._get_field_set(step, energy)
 
-        self._detailed_log['optimized_temps'] = beta_set
-        return beta_set
+        self._detailed_log['optimized_fields'] = field_set
+        return field_set
 
     def observe(self, instances):
         self._output('Initial run...')
-        beta_set = None
-        disorder_avg = self._get_disorder_avg(instances, '<E>', beta_set)
-        if self._optimize_temps:
-            beta_set = self._get_optimized_temps(disorder_avg)
-            disorder_avg = self._get_disorder_avg(instances, '<E>', beta_set)
+        field_set = None
+        disorder_avg = self._get_disorder_avg(instances, '<E>', field_set)
+        if self._optimize_fields:
+            field_set = self._get_optimized_fields(disorder_avg)
+            disorder_avg = self._get_disorder_avg(instances, '<E>', field_set)
         return disorder_avg
         
 
-    # Disorder average <E>(Beta)
-    # Fit temperatures to make dEdB constant
-    # Optimize temperature count
+    # Disorder average <E>(field)
+    # Fit fields to make dEdT constant
+    # Optimize field count
     # Get optimal TTS
     def bench_tempering(self, instances):
         self._output('Computing observables...')
-        beta_set = None
-        disorder_avg = self._get_disorder_avg(instances, '<E>', beta_set)
+        field_set = None
+        disorder_avg = self._get_disorder_avg(instances, '<E>', field_set)
         time_per_sweep = np.median(disorder_avg['Total_Walltime']/disorder_avg['Total_Sweeps'])
-        if self._optimize_temps:
-            beta_set = self._get_optimized_temps(disorder_avg)
-            self._output(beta_set)
+        if self._optimize_fields:
+            field_set = self._get_optimized_fields(disorder_avg)
+            self._output(field_set)
 
         self._output('Benchmarking...')
-        tts = self._get_tts(instances, beta_set)
+        tts = self._get_tts(instances, field_set)
         self._detailed_log['time_per_sweep'] = time_per_sweep
         self._detailed_log['tts'] = tts
         return tts, time_per_sweep
