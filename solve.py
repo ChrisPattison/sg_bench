@@ -17,6 +17,7 @@ class solve:
         self._field_count = config['field']['count']
 
         self._beta = config.get('beta', 10.0)
+        self._mc_sweeps = config.get('mc_sweeps', 10)
 
         self._restarts = config.get('bench_restarts', 100)
         self._sweep_timeout = config.get('sweep_timeout', 65536)
@@ -38,7 +39,8 @@ class solve:
         return pt_propanelib.make_schedule( \
                 sweeps = sweeps, \
                 field_set = field_set if field_set else self._get_initial_field_set(), \
-                beta = self._beta)
+                beta = self._beta, \
+                mc_sweeps = self._mc_sweeps)
 
     # Get TTS given a field set and sweep count
     def _get_tts(self, instances, field_set, cost = np.median):
