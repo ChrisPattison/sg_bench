@@ -79,19 +79,6 @@ class solve:
         
         return tts
 
-    def _fit_opt_sweeps(self, trials):
-        trials = pd.DataFrame.from_records(trials)
-        trials = trials.sort_values('sweeps').tail(4)
-        trials['log_sweeps'] = np.log(trials['sweeps'])
-        trials['log_tts'] = np.log(trials['tts'])
-        fit = sp.optimize.least_squares(lambda x: ((x[0] * (trials['log_sweeps'] - x[1])**2 + x[2])-trials['log_tts']), \
-            [np.mean(trials['log_tts']), trials['log_sweeps'].iloc[-2], np.mean(trials['log_tts'])])['x']
-        opt_sweeps = int(np.exp(fit[1]))
-        if opt_sweeps > trials['sweeps'].max():
-            warnings.warn('Optimal sweep count more than maximum sweep count tested. Got: '+str(opt_sweeps))
-            assert(opt_sweeps < 2*trials['sweeps'].max())
-        return opt_sweeps
-
     # Check whether the results are thermalized based on residual from last bin
     def _check_thermalized(self, data, obs):
         for name, group in data.groupby(['Gamma']):
