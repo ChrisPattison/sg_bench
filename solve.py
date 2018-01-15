@@ -56,31 +56,7 @@ class solve:
                 warnings.warn('TTS run timed out. Success probability: '+str(success_prob))
 
             runtimes = np.sort(np.apply_along_axis(np.asscalar, 1, i['results'].groupby('restart')['Total_Sweeps'].unique().reset_index()['Total_Sweeps'].tolist()))
-            runtimes = np.insert(runtimes, 0, 0)
-            success = np.linspace(0., 1, len(runtimes))
-            # make this shorter
-            unique_runtimes = []
-            unique_success = []
-            for i in range(len(runtimes)-1):
-                if runtimes[i] < runtimes[i+1]:
-                    unique_runtimes.append(runtimes[i])
-                    unique_success.append(success[i])
-            print(runtimes)
-            print(success)
-
-            prob = sp.interpolate.interp1d(unique_runtimes, unique_success, kind='quadratic', bounds_error=True)
-            clipped_prob = lambda x: np.clip(prob(x), 0.0, 1.0)
-            instance_tts = lambda t: t * np.log(1.-.99)/np.log(1.-clipped_prob(t))
-
-            optimized = sp.optimize.minimize(instance_tts, unique_runtimes[-2], method='Nelder-Mead')
-            if optimized.success:
-                optimal_runtime = optimized['x'][0]
-                optimal_tts = instance_tts(optimal_runtime)
-                tts.append(optimal_tts)
-            else:
-                self._output(optimized)
-                warnings.warn('Optimization for TTS failed.')
-        
+            tts.append(np.percentile(runtimes, 99))
         return tts
 
     # Check whether the results are thermalized based on residual from last bin
