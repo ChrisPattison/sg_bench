@@ -10,6 +10,8 @@ import pt_propanelib
 
 class solve:
     def __init__(self, config):
+        self._success_prob = 0.99
+
         self._machine_readable = config['machine_readable']
 
         self._field_max = config['field']['max']
@@ -69,8 +71,8 @@ class solve:
             print(success)
 
             prob = sp.interpolate.interp1d(unique_runtimes, unique_success, kind='quadratic', bounds_error=True)
-            clipped_prob = lambda x: np.clip(prob(x), 0.0, 1.0)
-            instance_tts = lambda t: t * np.log(1.-.99)/np.log(1.-clipped_prob(t))
+            clipped_prob = lambda x: np.clip(prob(x), 0.0, self._success_prob)
+            instance_tts = lambda t: t * np.log(1.-self._success_prob)/np.log(1.-clipped_prob(t))
 
             optimized = sp.optimize.minimize(instance_tts, unique_runtimes[-2], method='Nelder-Mead')
             if optimized.success:
