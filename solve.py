@@ -60,21 +60,16 @@ class solve:
             runtimes = np.sort(np.apply_along_axis(np.asscalar, 1, i['results'].groupby('restart')['Total_Sweeps'].unique().reset_index()['Total_Sweeps'].tolist()))
             runtimes = np.insert(runtimes, 0, 0)
             success = np.linspace(0., 1, len(runtimes))
-            # make this shorter
-            unique_runtimes = []
-            unique_success = []
-            for i in range(len(runtimes)-1):
-                if runtimes[i] < runtimes[i+1]:
-                    unique_runtimes.append(runtimes[i])
-                    unique_success.append(success[i])
-            print(runtimes)
-            print(success)
+            unique_runtimes, unique_indices = np.unique(runtimes, return_index=True)
+            unique_success = [success[i] for i in unique_indices]
 
-            prob = sp.interpolate.interp1d(unique_runtimes, unique_success, kind='quadratic', bounds_error=True)
-            clipped_prob = lambda x: np.clip(prob(x), 0.0, self._success_prob)
+            prob = sp.interpolate.interp1d(unique_runtimes, unique_success, kind='linear', bounds_error=True)
+            max_runtime = np.max(runtimes)
+            clipped_prob = lambda x: np.clip(prob(x) if x <= max_runtime else self._success_prob, 0.0, self._success_prob)
             instance_tts = lambda t: t * np.log(1.-self._success_prob)/np.log(1.-clipped_prob(t))
 
-            optimized = sp.optimize.minimize(instance_tts, unique_runtimes[-2], method='Nelder-Mead')
+            # CG methods fail due to cusp in TTS
+            optimized = sp.optimize.minimize(instance_tts, np.percentile(runtimes, 99), method='Nelder-Mead')
             if optimized.success:
                 optimal_runtime = optimized['x'][0]
                 optimal_tts = instance_tts(optimal_runtime)
@@ -82,7 +77,6 @@ class solve:
             else:
                 self._output(optimized)
                 warnings.warn('Optimization for TTS failed.')
-        
         return tts
 
     # Check whether the results are thermalized based on residual from last bin
