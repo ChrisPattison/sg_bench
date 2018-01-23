@@ -63,9 +63,9 @@ class solve:
             unique_runtimes, unique_indices = np.unique(runtimes, return_index=True)
             unique_success = [success[i] for i in unique_indices]
 
-            prob = sp.interpolate.interp1d(unique_runtimes, unique_success, kind='linear', bounds_error=True)
+            prob = sp.interpolate.interp1d(unique_runtimes, unique_success, kind='linear', bounds_error=False, fill_value='extrapolate')
             max_runtime = np.max(runtimes)
-            clipped_prob = lambda x: np.clip(prob(x) if x <= max_runtime else self._success_prob, 0.0, self._success_prob)
+            clipped_prob = lambda x: np.clip(prob(x), 0.0, self._success_prob)
             instance_tts = lambda t: t * np.log(1.-self._success_prob)/np.log(1.-clipped_prob(t))
 
             # CG methods fail due to cusp in TTS
