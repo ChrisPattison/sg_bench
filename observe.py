@@ -13,7 +13,7 @@ def observe(optimize_temp = True):
         print(run_data)
     else:
         full_data = solver.get_full_data()
-        full_data['data'] = run_data.to_dict()
+        full_data['data'] = run_data.to_dict(orient='list')
         print(json.dumps(full_data))
     
 if __name__ == "__main__":
