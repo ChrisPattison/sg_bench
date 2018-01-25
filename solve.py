@@ -18,6 +18,8 @@ class solve:
         self._field_min = config['field']['min']
         self._field_count = config['field']['count']
 
+        self._field_set = config['field'].get('set', None)
+
         self._beta = config.get('beta', 10.0)
         self._mc_sweeps = config.get('mc_sweeps', 10)
 
@@ -27,6 +29,9 @@ class solve:
         self._observable_sweeps = config.get('observable_sweeps', 4096)
         self._observable_timeout = config.get('observable_timeout', 3)
         self._thermalize_threshold = config.get('thermalize_threshold', 1e-3)
+
+        if self._optimize_fields and self._field_set:
+            warnings.warn('Optimize fields true but field set provided')
 
         self._detailed_log = {'beta':self._beta}
 
@@ -157,7 +162,9 @@ class solve:
         field_set = None
         disorder_avg = self._get_disorder_avg(instances, '<E>', field_set)
         time_per_sweep = np.median(disorder_avg['Total_Walltime']/disorder_avg['Total_Sweeps'])
-        if self._optimize_fields:
+        if self._field_set:
+            field_set = self._field_set
+        elif self._optimize_fields:
             field_set = self._get_optimized_fields(disorder_avg)
             self._output(field_set)
 
@@ -165,6 +172,7 @@ class solve:
         tts = self._get_tts(instances, field_set)
         self._detailed_log['time_per_sweep'] = time_per_sweep
         self._detailed_log['tts'] = tts
+        self._detailed_log['field_set'] = self._field_set
         return tts, time_per_sweep
 
     def get_full_data(self):
