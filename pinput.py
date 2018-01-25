@@ -5,7 +5,7 @@ import io
 import pathlib
 import numpy as np
 
-def get_input(help_text):
+def get_input(help_text, fetch_instances=True):
     args = sys.argv
     if '-h' in args or len(sys.argv) < 2:
         help = 'Copyright (c) 2017 C. Pattison\n' + help_text + \
@@ -20,7 +20,7 @@ beta :
 field_strength : float
 profile : float array
 
-<util>.py <configuration>
+<util>.py <configuration> <optional args>
 '''
         print(help)
         quit()
@@ -34,10 +34,17 @@ profile : float array
     with io.open(str(config_path.resolve()), 'r') as config_file:
         config = json.load(config_file)
     
-    instance_path = config_path.parents[0] / config['instances']
-    if not machine_readable:
-        print('Loading instances from '+str(instance_path.resolve()))
-    instances = instance.get_instance_set(str(instance_path.resolve()))
+    instance_path = pathlib.Path(config['instances'])
+    if not instance_path.is_absolute():
+        instance_path = config_path.parents[0] / instance_path
+
+    if fetch_instances:
+        if not machine_readable:
+            print('Loading instances from '+str(instance_path.resolve()))
+        instances = instance.get_instance_set(str(instance_path.resolve()))
+    else:
+        instances = instance.read_instance_list(str(instance_path.resolve()))
     
     config['machine_readable'] = machine_readable
-    return config, instances
+
+    return config, instances, args

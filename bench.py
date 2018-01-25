@@ -5,7 +5,7 @@ import numpy as np
 import json
 
 def bench(optimize_temp = True):
-    config, instances = pinput.get_input('Benchmark solver')
+    config, instances, args = pinput.get_input('Benchmark solver')
     solver = solve.solve(config)
 
     tts = solver.bench_tempering(instances)
