@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 import bondfile
 import pa_propanelib
 import pandas as pd
