@@ -6,14 +6,16 @@ import sys
 import warnings
 
 def combine():
-    conf_list = pathlib.Path(sys.argv[1])
+    if len(sys.argv) < 2:
+        print('combine.py <output list>')
+    output_file_list = pathlib.Path(sys.argv[1])
     out_files = []
-    with conf_list.open('r') as f:
-        out_files = [pathlib.Path(s.strip()+'.out') for s in f.readlines()]
+    with output_file_list.open('r') as f:
+        out_files = [pathlib.Path(s.strip()) for s in f.readlines()]
     
     combined = None
-    for output in out_files:
-        with output.open('r') as f:
+    for output_path in out_files:
+        with output_path.open('r') as f:
             output = json.load(f)
         if combined is None:
             combined = output
