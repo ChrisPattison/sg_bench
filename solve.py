@@ -112,7 +112,8 @@ class solve:
         return [i['results'][i['results']['Samples']==i['results']['Samples'].max()] for i in instances]
 
     def _get_disorder_avg(self, instances, obs, field_set):
-        return pd.concat(self._get_observable(instances, '<E>', field_set)).groupby(['Gamma']).mean().reset_index()
+        return pd.concat(self._get_observable(instances, '<E>', field_set)).groupby('Gamma').apply(np.mean).drop(columns=['Gamma']).reset_index()
+        # return pd.concat(self._get_observable(instances, '<E>', field_set)).groupby(['Gamma']).mean().reset_index()
 
 
     # Given a particular step and a starting field, uniformly place fields
