@@ -117,8 +117,8 @@ class solve:
 
 
     # Given a particular step and a starting field, uniformly place fields
-    def _get_field_set(self, distance, energy):
-        fields = [self._field_min]
+    def _get_field_set(self, distance, energy, min_field):
+        fields = [min_field]
         for i in range(self._field_count-1):
             cost = lambda x: ((fields[-1] - x)*np.abs(energy(fields[-1]) - energy(x)) - distance)
             for i in range(5):
@@ -134,12 +134,16 @@ class solve:
     # Selects a dT*dE step such that the final field is the one desired
     def _get_optimized_fields(self, disorder_avg):
         self._output('Computing field set...')
+        field_norm = disorder_avg['Gamma'].max()
+        energy_norm = disorder_avg['<E>'].max()
+        disorder_avg['norm_Gamma'] = disorder_avg['Gamma'] / field_norm
+        disorder_avg['norm_<E>'] = disorder_avg['<E>'] / energy_norm
         # fit to disorder averaged E(field)
-        energy = sp.interpolate.interp1d(disorder_avg['Gamma'], disorder_avg['<E>'], kind='linear', bounds_error=False, fill_value='extrapolate')
-        residual = lambda step: self._get_field_set(step, energy)[-1] - self._field_max
-        init_step = -(disorder_avg['<E>'].max() - disorder_avg['<E>'].min())*(disorder_avg['Gamma'].max() - disorder_avg['Gamma'].min())
+        energy = sp.interpolate.interp1d(disorder_avg['norm_Gamma'], disorder_avg['norm_<E>'], kind='linear', bounds_error=False, fill_value='extrapolate')
+        residual = lambda step: (self._get_field_set(step, energy, self._field_min/field_norm)[-1] - self._field_max/field_norm)
+        init_step = -(disorder_avg['norm_<E>'].max() - disorder_avg['norm_<E>'].min())*(disorder_avg['norm_Gamma'].max() - disorder_avg['norm_Gamma'].min())
         step = sp.optimize.bisect(residual, init_step*1e-5, init_step)
-        field_set = self._get_field_set(step, energy)
+        field_set = list(np.array(self._get_field_set(step, energy, self._field_min/field_norm)) * field_norm)
 
         self._detailed_log['optimized_fields'] = field_set
         return field_set
