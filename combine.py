@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-import json
+mport json
 import numpy as np
 import pathlib
 import sys
@@ -36,3 +35,4 @@ def combine():
 
 if __name__ == "__main__":
     combine()
+
