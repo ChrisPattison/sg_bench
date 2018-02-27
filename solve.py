@@ -40,7 +40,7 @@ class solve:
             print(string)
 
     def _get_initial_field_set(self):
-        return np.linspace(self._field_min, self._field_max, self._field_count)
+        return np.exp(np.linspace(np.log(self._field_min), np.log(self._field_max), self._field_count))
 
     def _make_schedule(self, sweeps, field_set = None):
         return pt_propanelib.make_schedule( \
