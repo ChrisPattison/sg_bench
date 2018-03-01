@@ -28,6 +28,7 @@ def combine():
             warnings.warn('Beta is inconsistent')
 
         combined['tts'] += output['tts']
+        combined['p_s'] += output['p_s']
         combined['time_per_sweep'] += output['time_per_sweep']
 
     combined['time_per_sweep'] /= len(out_files)
