@@ -24,7 +24,7 @@ def combine():
         if not np.array_equal(combined['field_set'], output['field_set']):
             warnings.warn('Field set is inconsistent')
 
-        if combined['beta'] is not output['beta']:
+        if combined['beta'] != output['beta']:
             warnings.warn('Beta is inconsistent')
 
         combined['tts'] += output['tts']
