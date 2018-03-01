@@ -68,6 +68,10 @@ class solve:
             success = np.linspace(0., 1, len(runtimes))
             unique_runtimes, unique_indices = np.unique(runtimes, return_index=True)
             unique_success = [success[i] for i in unique_indices]
+            # Last values are timeout and not successes
+            if success_prob != 1.0:
+                del unique_success[-1]
+                del unique_runtimes[-1]
 
             prob = sp.interpolate.interp1d(unique_runtimes, unique_success, kind='linear', bounds_error=False, fill_value='extrapolate')
             max_runtime = np.max(runtimes)
