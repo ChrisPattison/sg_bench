@@ -1,4 +1,5 @@
-mport json
+#!/usr/bin/env python3
+import json
 import numpy as np
 import pathlib
 import sys
