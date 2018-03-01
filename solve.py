@@ -56,6 +56,7 @@ class solve:
         schedule = self._make_schedule(sweeps = self._sweep_timeout, field_set = field_set)
         instances = backend.get_backend().run_instances(schedule, instances, self._restarts, statistics=False)
 
+        p_s = []
         tts = []
         for i in instances:
             success_prob = np.mean(np.isclose(i['ground_energy'], i['results'].groupby('restart').min()['E_MIN']))
@@ -70,7 +71,7 @@ class solve:
 
             prob = sp.interpolate.interp1d(unique_runtimes, unique_success, kind='linear', bounds_error=False, fill_value='extrapolate')
             max_runtime = np.max(runtimes)
-            clipped_prob = lambda x: np.clip(prob(x), 0.0, self._success_prob)
+            clipped_prob = lambda x: np.clip(prob(x), 0.0, min(self._success_prob, success_prob))
             instance_tts = lambda t: t * np.log(1.-self._success_prob)/np.log(1.-clipped_prob(t))
 
             # CG methods fail due to cusp in TTS
@@ -79,10 +80,12 @@ class solve:
                 optimal_runtime = optimized['x'][0]
                 optimal_tts = instance_tts(optimal_runtime)
                 tts.append(optimal_tts)
+                p_s.append(success_prob)
             else:
                 self._output(optimized)
                 warnings.warn('Optimization for TTS failed.')
-        return tts
+
+        return tts, p_s
 
     # Check whether the results are thermalized based on residual from last bin
     def _check_thermalized(self, data, obs):
@@ -174,9 +177,10 @@ class solve:
             self._output(field_set)
 
         self._output('Benchmarking...')
-        tts = self._get_tts(instances, field_set)
+        tts, success_prob = self._get_tts(instances, field_set)
         self._detailed_log['time_per_sweep'] = time_per_sweep
         self._detailed_log['tts'] = tts
+        self._detailed_log['p_s'] = success_prob
         self._detailed_log['field_set'] = self._field_set
         return tts, time_per_sweep
 
