@@ -70,8 +70,8 @@ class solve:
             unique_success = [success[i] for i in unique_indices]
             # Last values are timeout and not successes
             if success_prob != 1.0:
-                del unique_success[-1]
-                del unique_runtimes[-1]
+                unique_success = unique_success[:-1]
+                unique_runtimes = unique_runtimes[:-1]
 
             prob = sp.interpolate.interp1d(unique_runtimes, unique_success, kind='linear', bounds_error=False, fill_value='extrapolate')
             max_runtime = np.max(runtimes)
