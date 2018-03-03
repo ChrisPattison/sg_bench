@@ -72,6 +72,8 @@ class solve:
             if success_prob != 1.0:
                 unique_success = unique_success[:-1]
                 unique_runtimes = unique_runtimes[:-1]
+            if len(unique_success) < 2:
+                return np.inf, p_s
 
             prob = sp.interpolate.interp1d(unique_runtimes, unique_success, kind='linear', bounds_error=False, fill_value='extrapolate')
             max_runtime = np.max(runtimes)
