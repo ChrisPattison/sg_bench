@@ -59,7 +59,8 @@ class solve:
         p_s = []
         tts = []
         for i in instances:
-            success_prob = np.mean(np.isclose(i['ground_energy'], i['results'].groupby('restart').min()['E_MIN']))
+            min_energy = i['results'].groupby('restart').min()['E_MIN']
+            success_prob = np.mean(np.logical_or(np.isclose(i['ground_energy'], min_energy), i['ground_energy'] > min_energy))
             if not np.isclose(success_prob, 1.0):
                 warnings.warn('TTS run timed out. Success probability: '+str(success_prob))
 
