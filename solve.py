@@ -54,6 +54,8 @@ class solve:
     # Get TTS given a field set and sweep count
     def _get_tts(self, instances, field_set, cost = np.median):
         results = []
+        for i in len(instances):
+            instances[i]['target_energy'] = instances[i]['ground_energy'] * self._gse_target
         
         schedule = self._make_schedule(sweeps = self._sweep_timeout, field_set = field_set)
         instances = backend.get_backend().run_instances(schedule, instances, self._restarts, statistics=False)
@@ -62,8 +64,7 @@ class solve:
         tts = []
         for i in instances:
             min_energy = i['results'].groupby('restart').min()['E_MIN']
-            target_energy = i['ground_energy']*self._gse_target
-            success_prob = np.mean(np.logical_or(np.isclose(target_energy, min_energy), target_energy > min_energy))
+            success_prob = np.mean(np.logical_or(np.isclose(i['target_energy'], min_energy), i['target_energy'] > min_energy))
             if not np.isclose(success_prob, 1.0):
                 warnings.warn('TTS run timed out. Success probability: '+str(success_prob))
 

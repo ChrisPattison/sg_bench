@@ -59,7 +59,7 @@ class localrun:
 
         pool = multiprocessing.Pool(self._cores)
         for i in instances:
-            ground_energy = None if statistics else i['ground_energy']
+            ground_energy = None if statistics else i['target_energy']
 
             # deepcopy required since i is not picklable
             i_copy = copy.deepcopy(i)
@@ -88,7 +88,7 @@ class remoterun:
     def run_instances(self, schedule, instances, restarts, statistics=True):
         
         for i in instances:
-            ground_energy = None if statistics else i['ground_energy']
+            ground_energy = None if statistics else i['target_energy']
 
             # deepcopy required since i is not picklable
             i_copy = copy.deepcopy(i)
