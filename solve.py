@@ -30,6 +30,8 @@ class solve:
         self._observable_timeout = config.get('observable_timeout', 3)
         self._thermalize_threshold = config.get('thermalize_threshold', 1e-3)
 
+        self._gse_target = config.get('gse_target', 1.00)
+        
         if self._optimize_fields and self._field_set:
             warnings.warn('Optimize fields true but field set provided')
 
@@ -60,7 +62,8 @@ class solve:
         tts = []
         for i in instances:
             min_energy = i['results'].groupby('restart').min()['E_MIN']
-            success_prob = np.mean(np.logical_or(np.isclose(i['ground_energy'], min_energy), i['ground_energy'] > min_energy))
+            target_energy = i['ground_energy']*self._gse_target
+            success_prob = np.mean(np.logical_or(np.isclose(target_energy, min_energy), target_energy > min_energy))
             if not np.isclose(success_prob, 1.0):
                 warnings.warn('TTS run timed out. Success probability: '+str(success_prob))
 
