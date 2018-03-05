@@ -54,7 +54,7 @@ class solve:
     # Get TTS given a field set and sweep count
     def _get_tts(self, instances, field_set, cost = np.median):
         results = []
-        for i in len(instances):
+        for i in range(len(instances)):
             instances[i]['target_energy'] = instances[i]['ground_energy'] * self._gse_target
         
         schedule = self._make_schedule(sweeps = self._sweep_timeout, field_set = field_set)
