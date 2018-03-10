@@ -149,6 +149,12 @@ class solve:
             assert(fields[-1] > fields[-2])
         return fields
 
+    def _interpolate_energy(self, field, energy):
+        linear_energy = sp.interpolate.interp1d(field, energy, kind='linear', bounds_error=False, fill_value='extrapolate')
+        cubic_energy = sp.interpolate.interp1d(field, energy, kind='cubic')
+        return (lambda f, linear_energy=linear_energy, cubic_energy=cubic_energy, bounds=(np.min(field),np.max(field)):
+            cubic_energy(f) if bounds[0] < f and f < bounds[1] else linear_energy(f))
+
     # Selects a dT*dE step such that the final field is the one desired
     def _get_optimized_fields(self, disorder_avg):
         self._output('Computing field set...')
@@ -157,7 +163,7 @@ class solve:
         disorder_avg['norm_Gamma'] = disorder_avg['Gamma'] / field_norm
         disorder_avg['norm_<E>'] = disorder_avg['<E>'] / energy_norm
         # fit to disorder averaged E(field)
-        energy = sp.interpolate.interp1d(disorder_avg['norm_Gamma'], disorder_avg['norm_<E>'], kind='linear', bounds_error=False, fill_value='extrapolate')
+        energy = self._interpolate_energy(disorder_avg['norm_Gamma'], disorder_avg['norm_<E>'])
         residual = lambda step: (self._get_field_set(step, energy, self._field_min/field_norm)[-1] - self._field_max/field_norm)
         init_step = -(disorder_avg['norm_<E>'].max() - disorder_avg['norm_<E>'].min())*(disorder_avg['norm_Gamma'].max() - disorder_avg['norm_Gamma'].min())
         step = sp.optimize.bisect(residual, init_step*1e-5, init_step)
