@@ -62,6 +62,7 @@ class solve:
 
         p_s = []
         tts = []
+        p99_tts = []
         for i in instances:
             min_energy = i['results'].groupby('restart').min()['E_MIN']
             success_prob = np.mean(np.logical_or(np.isclose(i['target_energy'], min_energy), i['target_energy'] > min_energy))
@@ -69,6 +70,7 @@ class solve:
                 warnings.warn('TTS run timed out. Success probability: '+str(success_prob))
 
             runtimes = np.sort(np.apply_along_axis(np.asscalar, 1, i['results'].groupby('restart')['Total_Sweeps'].unique().reset_index()['Total_Sweeps'].tolist()))
+            p99_tts.append(np.percentile(runtimes, 99))
             runtimes = np.insert(runtimes, 0, 0)
             success = np.linspace(0., 1, len(runtimes))
             unique_runtimes, unique_indices = np.unique(runtimes, return_index=True)
@@ -98,7 +100,7 @@ class solve:
                 self._output(optimized)
                 warnings.warn('Optimization for TTS failed.')
 
-        return tts, p_s
+        return tts, p_s, p99_tts
 
     # Check whether the results are thermalized based on residual from last bin
     def _check_thermalized(self, data, obs):
@@ -190,9 +192,10 @@ class solve:
             self._output(field_set)
 
         self._output('Benchmarking...')
-        tts, success_prob = self._get_tts(instances, field_set)
+        tts, success_prob, p99_tts = self._get_tts(instances, field_set)
         self._detailed_log['time_per_sweep'] = time_per_sweep
         self._detailed_log['tts'] = tts
+        self._detailed_log['p99_tts'] = p99_tts
         self._detailed_log['p_s'] = success_prob
         self._detailed_log['field_set'] = self._field_set
         return tts, time_per_sweep
