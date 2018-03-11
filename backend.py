@@ -25,7 +25,7 @@ def run_restart(schedule, instance, ground_energy = None): # schedule, instance
 
             # Run solver
             restart_data = []
-            command = ['propane_ptsvmc', '-m', 'pt', schedule_file.name, bonds_file.name]
+            command = ['quit_solve', schedule_file.name, bonds_file.name]
             # Optional ground state energy specification
             if ground_energy is not None:
                 command.extend(['-p', str(ground_energy)])
