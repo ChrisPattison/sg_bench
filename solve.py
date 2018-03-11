@@ -17,8 +17,8 @@ class solve:
         self._field_max = config['field']['max']
         self._field_min = config['field']['min']
         self._field_count = config['field']['count']
-
         self._field_set = config['field'].get('set', None)
+        self._field_distr = config['field'].get('distr', 'log')
 
         self._beta = config.get('beta', 10.0)
         self._mc_sweeps = config.get('mc_sweeps', 10)
@@ -42,7 +42,10 @@ class solve:
             print(string)
 
     def _get_initial_field_set(self):
-        return np.exp(np.linspace(np.log(self._field_min), np.log(self._field_max), self._field_count))
+        if self._field_distr == 'linear':
+            return np.linspace(self._field_min, self._field_max, self._field_count)
+        else:
+            return np.exp(np.linspace(np.log(self._field_min), np.log(self._field_max), self._field_count))
 
     def _make_schedule(self, sweeps, field_set = None):
         return pt_propanelib.make_schedule( \
