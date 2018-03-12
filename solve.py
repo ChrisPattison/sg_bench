@@ -121,7 +121,7 @@ class solve:
 
     # Check whether the results are thermalized based on residual from last bin
     def _check_thermalized(self, data, obs):
-        for name, group in data.groupby(['Beta', 'Gamma', 'Lambda']):
+        for name, group in data.groupby(['Beta']):
             sorted_group = group.sort_values(['Samples'])
             residual = np.abs(sorted_group.iloc[-1][obs] - sorted_group.iloc[-2][obs])/np.mean(sorted_group.iloc[-2:][obs])
             if(residual > self._thermalize_threshold):
@@ -147,7 +147,7 @@ class solve:
         return [i['results'][i['results']['Samples']==i['results']['Samples'].max()] for i in instances]
 
     def _get_disorder_avg(self, instances, obs, param_set):
-        return pd.concat(self._get_observable(instances, '<E>', param_set)).groupby(['Beta', 'Gamma', 'Lambda']).apply(np.mean).drop(columns=['Beta', 'Gamma', 'Lambda']).reset_index()
+        return pd.concat(self._get_observable(instances, '<E>', param_set)).groupby(['Beta']).apply(np.mean).drop(columns=['Beta']).reset_index()
 
 
     # Given a particular step and a starting field, uniformly place temperatures
@@ -156,9 +156,9 @@ class solve:
         for i in range(self._replica_count-1):
             cost = lambda x: (
                 (temps[-1]*relation['driver'](temps[-1]) - x*relation['driver'](x))
-                *(energy['driver'](temps[-1]), energy['driver'](x))
+                *(energy['driver'](temps[-1]) - energy['driver'](x))
                 (temps[-1]*relation['problem'](temps[-1]) - x*relation['problem'](x))
-                *(energy['problem'](temps[-1]), energy['problem'](x))
+                *(energy['problem'](temps[-1]) - energy['problem'](x))
                 - distance)
             for i in range(5):
                 # Bias in starting value to get the positive incremen
@@ -190,14 +190,14 @@ class solve:
         energy['driver'] = self._interpolate_energy(disorder_avg['Beta'], disorder_avg['norm_<E_D>'])
         residual = lambda step: (self._get_beta_set(step, energy, self._beta['min'], relation)[-1] - self._beta['max'])
         init_step = (
-            disorder_avg['norm_<E_P>'].ptp()*(disorder_avg['beta'] * disorder_avg['Lambda']).ptp() 
-            + disorder_avg['norm_<E_D>'].ptp()*(disorder_avg['beta'] * disorder_avg['Gamma']).ptp())
+            disorder_avg['norm_<E_P>'].ptp()*(disorder_avg['Beta'] * disorder_avg['Lambda']).ptp() 
+            + disorder_avg['norm_<E_D>'].ptp()*(disorder_avg['Beta'] * disorder_avg['Gamma']).ptp())
         step = sp.optimize.bisect(residual, init_step*1e-5, init_step)
         beta_set = list(np.array(self._get_beta_set(step, energy, self._beta['min'], relation)))
 
         param_set['beta'] = beta_set
         param_set['driver'] = relation['driver'](beta_set)
-        param_set['problem'] = driver_relation(beta_set)
+        param_set['problem'] = relation['problem'](beta_set)
         self._detailed_log['optimized_param_set'] = param_set
         return param_set
 
