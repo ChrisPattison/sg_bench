@@ -121,7 +121,7 @@ class solve:
 
     # Check whether the results are thermalized based on residual from last bin
     def _check_thermalized(self, data, obs):
-        for name, group in data.groupby(['Gamma']):
+        for name, group in data.groupby(['Beta', 'Gamma', 'Lambda']):
             sorted_group = group.sort_values(['Samples'])
             residual = np.abs(sorted_group.iloc[-1][obs] - sorted_group.iloc[-2][obs])/np.mean(sorted_group.iloc[-2:][obs])
             if(residual > self._thermalize_threshold):
@@ -147,24 +147,30 @@ class solve:
         return [i['results'][i['results']['Samples']==i['results']['Samples'].max()] for i in instances]
 
     def _get_disorder_avg(self, instances, obs, param_set):
-        return pd.concat(self._get_observable(instances, '<E>', param_set)).groupby('Gamma').apply(np.mean).drop(columns=['Gamma']).reset_index()
+        return pd.concat(self._get_observable(instances, '<E>', param_set)).groupby(['Beta', 'Gamma', 'Lambda']).apply(np.mean).drop(columns=['Beta', 'Gamma', 'Lambda']).reset_index()
 
 
-    # Given a particular step and a starting field, uniformly place fields
-    def _get_field_set(self, distance, energy, min_field):
-        fields = [min_field]
+    # Given a particular step and a starting field, uniformly place temperatures
+    def _get_beta_set(self, distance, energy, min_beta, relation):
+        temps = [min_beta]
         for i in range(self._replica_count-1):
-            cost = lambda x: ((fields[-1] - x)*np.abs(energy(fields[-1]) - energy(x)) - distance)
+            cost = lambda x: (
+                (temps[-1]*relation['driver'](temps[-1]) - x*relation['driver'](x))
+                *(energy['driver'](temps[-1]), energy['driver'](x))
+                (temps[-1]*relation['problem'](temps[-1]) - x*relation['problem'](x))
+                *(energy['problem'](temps[-1]), energy['problem'](x))
+                - distance)
             for i in range(5):
                 # Bias in starting value to get the positive incremen
-                next_field = sp.optimize.root(cost, fields[-1]+np.random.uniform(0,2) , tol=1e-7)
+                next_field = sp.optimize.root(cost, temps[-1]+np.random.uniform(0,2) , tol=1e-7)
                 if next_field['success']:
                     break
             assert(next_field['success'])
-            fields.append(next_field['x'][0])
-            assert(fields[-1] > fields[-2])
-        return fields
+            temps.append(next_field['x'][0])
+            assert(temps[-1] > temps[-2])
+        return temps
 
+    # energy['problem'] and energy['driver'] are the problem and driver energies as a function of beta
     def _interpolate_energy(self, field, energy):
         linear_energy = sp.interpolate.interp1d(field, energy, kind='linear', bounds_error=False, fill_value='extrapolate')
         cubic_energy = sp.interpolate.interp1d(field, energy, kind='cubic')
@@ -172,29 +178,48 @@ class solve:
             cubic_energy(f) if bounds[0] < f and f < bounds[1] else linear_energy(f))
 
     # Selects a dT*dE step such that the final field is the one desired
-    # Broken
-    def _get_optimized_fields(self, disorder_avg):
+    # relation['driver'] and relation['problem'] are functions that return the driver and problem values as a function of beta
+    def _get_optimized_param_set(self, disorder_avg, relation):
         self._output('Computing field set...')
-        field_norm = disorder_avg['Gamma'].max()
         energy_norm = disorder_avg['<E>'].max()
-        disorder_avg['norm_Gamma'] = disorder_avg['Gamma'] / field_norm
-        disorder_avg['norm_<E>'] = disorder_avg['<E>'] / energy_norm
+        disorder_avg['norm_<E_P>'] = disorder_avg['<E_P>'] / energy_norm
+        disorder_avg['norm_<E_D>'] = disorder_avg['<E_D>'] / energy_norm
         # fit to disorder averaged E(field)
-        energy = self._interpolate_energy(disorder_avg['norm_Gamma'], disorder_avg['norm_<E>'])
-        residual = lambda step: (self._get_field_set(step, energy, self._driver_min/field_norm)[-1] - self._driver_max/field_norm)
-        init_step = -(disorder_avg['norm_<E>'].max() - disorder_avg['norm_<E>'].min())*(disorder_avg['norm_Gamma'].max() - disorder_avg['norm_Gamma'].min())
+        energy = {}
+        energy['problem'] = self._interpolate_energy(disorder_avg['Beta'], disorder_avg['norm_<E_P>'])
+        energy['driver'] = self._interpolate_energy(disorder_avg['Beta'], disorder_avg['norm_<E_D>'])
+        residual = lambda step: (self._get_beta_set(step, energy, self._beta['min'], relation)[-1] - self._beta['max'])
+        init_step = (
+            disorder_avg['norm_<E_P>'].ptp()*(disorder_avg['beta'] * disorder_avg['Lambda']).ptp() 
+            + disorder_avg['norm_<E_D>'].ptp()*(disorder_avg['beta'] * disorder_avg['Gamma']).ptp())
         step = sp.optimize.bisect(residual, init_step*1e-5, init_step)
-        field_set = list(np.array(self._get_field_set(step, energy, self._driver_min/field_norm)) * field_norm)
+        beta_set = list(np.array(self._get_beta_set(step, energy, self._beta['min'], relation)))
 
-        self._detailed_log['optimized_fields'] = field_set
-        return field_set
+        param_set['beta'] = beta_set
+        param_set['driver'] = relation['driver'](beta_set)
+        param_set['problem'] = driver_relation(beta_set)
+        self._detailed_log['optimized_param_set'] = param_set
+        return param_set
 
+    # Returns a linear relationship between driver/beta and problem/beta
+    def _get_linear_relation(self):
+        relation = {}
+        relation['driver'] = sp.interpolate.interp1d(
+            [self._beta['min'], self._beta['max']], 
+            [self._driver['min'], self._driver['max']], 
+            bounds_error=False, fill_value='extrapolate')
+        relation['problem'] = sp.interpolate.interp1d(
+            [self._beta['min'], self._beta['max']], 
+            [self._problem['min'], self._problem['max']], 
+            bounds_error=False, fill_value='extrapolate')
+        return relation
+    
     def observe(self, instances):
         self._output('Initial run...')
         param_set = None
         disorder_avg = self._get_disorder_avg(instances, '<E>', param_set)
         if self._optimize_set:
-            param_set = self._get_optimized_fields(disorder_avg)
+            param_set = self._get_optimized_param_set(disorder_avg, self._get_linear_relation())
             disorder_avg = self._get_disorder_avg(instances, '<E>', param_set)
         return disorder_avg
         
@@ -214,7 +239,7 @@ class solve:
         param_set['beta'] = self._beta['set']
 
         if self._optimize_set:
-            param_set = self._get_optimized_params(disorder_avg)
+            param_set = self._get_optimized_params(disorder_avg, self._get_linear_relation())
             self._output(param_set)
 
         self._output('Benchmarking...')
