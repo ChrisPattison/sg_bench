@@ -154,11 +154,11 @@ class solve:
     def _get_beta_set(self, distance, energy, min_beta, relation):
         temps = [min_beta]
         for i in range(self._replica_count-1):
-            cost = lambda x: (
-                (temps[-1]*relation['driver'](temps[-1]) - x*relation['driver'](x))
-                *(energy['driver'](temps[-1]) - energy['driver'](x))
-                (temps[-1]*relation['problem'](temps[-1]) - x*relation['problem'](x))
-                *(energy['problem'](temps[-1]) - energy['problem'](x))
+            cost = lambda x: ( 
+                (temps[-1]*relation['driver'](temps[-1]) - x*relation['driver'](x)) 
+                * (energy['driver'](temps[-1]) - energy['driver'](x)) 
+                + (temps[-1]*relation['problem'](temps[-1]) - x*relation['problem'](x)) 
+                * (energy['problem'](temps[-1]) - energy['problem'](x)) 
                 - distance)
             for i in range(5):
                 # Bias in starting value to get the positive incremen
@@ -167,7 +167,6 @@ class solve:
                     break
             assert(next_field['success'])
             temps.append(next_field['x'][0])
-            assert(temps[-1] > temps[-2])
         return temps
 
     # energy['problem'] and energy['driver'] are the problem and driver energies as a function of beta
@@ -189,9 +188,10 @@ class solve:
         energy['problem'] = self._interpolate_energy(disorder_avg['Beta'], disorder_avg['norm_<E_P>'])
         energy['driver'] = self._interpolate_energy(disorder_avg['Beta'], disorder_avg['norm_<E_D>'])
         residual = lambda step: (self._get_beta_set(step, energy, self._beta['min'], relation)[-1] - self._beta['max'])
+        sdiff = lambda x: x.iloc[-1] - x.iloc[0]
         init_step = (
-            disorder_avg['norm_<E_P>'].ptp()*(disorder_avg['Beta'] * disorder_avg['Lambda']).ptp() 
-            + disorder_avg['norm_<E_D>'].ptp()*(disorder_avg['Beta'] * disorder_avg['Gamma']).ptp())
+            sdiff(disorder_avg['norm_<E_P>'])*sdiff(disorder_avg['Beta'] * disorder_avg['Lambda']) 
+            + sdiff(disorder_avg['norm_<E_D>'])*sdiff(disorder_avg['Beta'] * disorder_avg['Gamma']))
         step = sp.optimize.bisect(residual, init_step*1e-5, init_step)
         beta_set = list(np.array(self._get_beta_set(step, energy, self._beta['min'], relation)))
 
