@@ -242,7 +242,7 @@ class solve:
         param_set['beta'] = self._beta['set']
 
         if self._optimize_set:
-            param_set = self._get_optimized_params(disorder_avg, self._get_linear_relation())
+            param_set = self._get_optimized_param_set(disorder_avg, self._get_linear_relation())
             self._output(param_set)
 
         self._output('Benchmarking...')
