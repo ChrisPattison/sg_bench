@@ -161,21 +161,10 @@ class solve:
                 * (energy['problem'](temps[-1]) - energy['problem'](x)) 
                 - distance))
 
-            candidates = np.linspace(temps[-1], temps[-1]+4, 40)
-            values = np.sign(cost(candidates))
-            high_zero = np.argwhere(values != values[0])
-
-            next_value = None
-            if len(high_zero) == 0:
-                next_value = sp.optimize.root(cost, candidates[-1])
-                assert(next_value['success'])
-                next_value = next_value['x']
-            else:
-                high_zero = high_zero[0]
-                next_value = sp.optimize.bisect(cost, candidates[high_zero-1], candidates[high_zero])
-            assert(next_value - temps[-1] > 0)
-            temps.append(next_value)
-        print(temps)
+            next_value = sp.optimize.root(cost, temps[-1]+0.1)
+            assert(next_value['success'])
+            assert(next_value['x'] - temps[-1] > 0)
+            temps.append(next_value['x'])
         return temps
 
     # energy['problem'] and energy['driver'] are the problem and driver energies as a function of beta
@@ -192,16 +181,17 @@ class solve:
         energy_norm = disorder_avg['<E>'].max()
         disorder_avg['norm_<E_P>'] = disorder_avg['<E_P>'] / energy_norm
         disorder_avg['norm_<E_D>'] = disorder_avg['<E_D>'] / energy_norm
+        
         # fit to disorder averaged E(field)
         energy = {}
         energy['problem'] = self._interpolate_energy(disorder_avg['Beta'], disorder_avg['norm_<E_P>'])
         energy['driver'] = self._interpolate_energy(disorder_avg['Beta'], disorder_avg['norm_<E_D>'])
         residual = lambda step: (self._get_beta_set(step, energy, self._beta['min'], relation)[-1] - self._beta['max'])
+
         sdiff = lambda x: x.iloc[-1] - x.iloc[0]
-        step = -np.log(0.25)
-        # step = sp.optimize.bisect(residual, 0, 1, full_output=True, disp=True)
+        step = sp.optimize.bisect(residual, -np.log(.001), -np.log(.99))
         beta_set = list(np.array(self._get_beta_set(step, energy, self._beta['min'], relation)))
-        print(self._beta, beta_set)
+        
         param_set = {}
         param_set['beta'] = beta_set
         param_set['driver'] = relation['driver'](beta_set)
