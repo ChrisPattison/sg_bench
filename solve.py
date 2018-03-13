@@ -233,13 +233,9 @@ class solve:
     # Get optimal TTS
     def bench_tempering(self, instances):
         self._output('Computing observables...')
-        param_set = {}
+        param_set = None
         disorder_avg = self._get_disorder_avg(instances, '<E>', param_set)
         time_per_sweep = np.median(disorder_avg['Total_Walltime']/disorder_avg['Total_Sweeps'])
-
-        param_set['driver'] = self._driver['set']
-        param_set['problem'] = self._problem['set']
-        param_set['beta'] = self._beta['set']
 
         if self._optimize_set:
             param_set = self._get_optimized_param_set(disorder_avg, self._get_linear_relation())
