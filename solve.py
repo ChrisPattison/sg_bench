@@ -54,6 +54,11 @@ class solve:
     def _get_initial_set(self, set_params):
         if set_params['distr'] == 'linear':
             return np.linspace(set_params['min'], set_params['max'], self._replica_count)
+        elif set_params['distr'] == 'invgeom':
+            inv_stop   = 1./set_params['max']
+            inv_start  = 1./set_params['min']
+            R = np.power(inv_stop/inv_start, 1.0/self._replica_count)
+            return 1.0/(inv_start * np.power(R, np.linspace(0, self._replica_count, self._replica_count)))
         else:
             return np.exp(np.linspace(np.log(set_params['min']), np.log(set_params['max']), self._replica_count))
 
