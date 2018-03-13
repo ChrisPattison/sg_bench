@@ -79,7 +79,7 @@ class solve:
         for i in range(len(instances)):
             instances[i]['target_energy'] = instances[i]['ground_energy'] * self._gse_target
         
-        schedule = self._make_schedule(sweeps = self._sweep_timeout, param_set = param_set, mc_sweeps = self._mc_sweeps)
+        schedule = self._make_schedule(sweeps = self._sweep_timeout, param_set = param_set)
         instances = backend.get_backend().run_instances(schedule, instances, self._restarts, statistics=False)
 
         p_s = []
