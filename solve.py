@@ -121,7 +121,7 @@ class solve:
 
     # Check whether the results are thermalized based on residual from last bin
     def _check_thermalized(self, data, obs):
-        for name, group in data.groupby(['Beta']):
+        for name, group in data.groupby(['Beta', 'Gamma', 'Lambda']):
             sorted_group = group.sort_values(['Samples'])
             residual = np.abs(sorted_group.iloc[-1][obs] - sorted_group.iloc[-2][obs])/np.mean(sorted_group.iloc[-2:][obs])
             if(residual > self._thermalize_threshold):
@@ -147,26 +147,35 @@ class solve:
         return [i['results'][i['results']['Samples']==i['results']['Samples'].max()] for i in instances]
 
     def _get_disorder_avg(self, instances, obs, param_set):
-        return pd.concat(self._get_observable(instances, '<E>', param_set)).groupby(['Beta']).apply(np.mean).drop(columns=['Beta']).reset_index()
+        return pd.concat(self._get_observable(instances, '<E>', param_set)).groupby(['Beta', 'Gamma', 'Lambda']).apply(np.mean).drop(columns=['Beta', 'Gamma', 'Lambda']).reset_index()
 
 
     # Given a particular step and a starting field, uniformly place temperatures
     def _get_beta_set(self, distance, energy, min_beta, relation):
         temps = [min_beta]
         for i in range(self._replica_count-1):
-            cost = lambda x: ( 
+            cost = np.vectorize(lambda x: ( 
                 (temps[-1]*relation['driver'](temps[-1]) - x*relation['driver'](x)) 
                 * (energy['driver'](temps[-1]) - energy['driver'](x)) 
                 + (temps[-1]*relation['problem'](temps[-1]) - x*relation['problem'](x)) 
                 * (energy['problem'](temps[-1]) - energy['problem'](x)) 
-                - distance)
-            for i in range(5):
-                # Bias in starting value to get the positive incremen
-                next_field = sp.optimize.root(cost, temps[-1]+np.random.uniform(0,2) , tol=1e-7)
-                if next_field['success']:
-                    break
-            assert(next_field['success'])
-            temps.append(next_field['x'][0])
+                - distance))
+
+            candidates = np.linspace(temps[-1], temps[-1]+4, 40)
+            values = np.sign(cost(candidates))
+            high_zero = np.argwhere(values != values[0])
+
+            next_value = None
+            if len(high_zero) == 0:
+                next_value = sp.optimize.root(cost, candidates[-1])
+                assert(next_value['success'])
+                next_value = next_value['x']
+            else:
+                high_zero = high_zero[0]
+                next_value = sp.optimize.bisect(cost, candidates[high_zero-1], candidates[high_zero])
+            assert(next_value - temps[-1] > 0)
+            temps.append(next_value)
+        print(temps)
         return temps
 
     # energy['problem'] and energy['driver'] are the problem and driver energies as a function of beta
@@ -189,12 +198,11 @@ class solve:
         energy['driver'] = self._interpolate_energy(disorder_avg['Beta'], disorder_avg['norm_<E_D>'])
         residual = lambda step: (self._get_beta_set(step, energy, self._beta['min'], relation)[-1] - self._beta['max'])
         sdiff = lambda x: x.iloc[-1] - x.iloc[0]
-        init_step = (
-            sdiff(disorder_avg['norm_<E_P>'])*sdiff(disorder_avg['Beta'] * disorder_avg['Lambda']) 
-            + sdiff(disorder_avg['norm_<E_D>'])*sdiff(disorder_avg['Beta'] * disorder_avg['Gamma']))
-        step = sp.optimize.bisect(residual, init_step*1e-5, init_step)
+        step = -np.log(0.25)
+        # step = sp.optimize.bisect(residual, 0, 1, full_output=True, disp=True)
         beta_set = list(np.array(self._get_beta_set(step, energy, self._beta['min'], relation)))
-
+        print(self._beta, beta_set)
+        param_set = {}
         param_set['beta'] = beta_set
         param_set['driver'] = relation['driver'](beta_set)
         param_set['problem'] = relation['problem'](beta_set)
@@ -207,11 +215,11 @@ class solve:
         relation['driver'] = sp.interpolate.interp1d(
             [self._beta['min'], self._beta['max']], 
             [self._driver['min'], self._driver['max']], 
-            bounds_error=False, fill_value='extrapolate')
+            bounds_error=False, fill_value=(self._driver['min'], self._driver['max']))
         relation['problem'] = sp.interpolate.interp1d(
             [self._beta['min'], self._beta['max']], 
             [self._problem['min'], self._problem['max']], 
-            bounds_error=False, fill_value='extrapolate')
+            bounds_error=False, fill_value=(self._problem['min'], self._problem['max']))
         return relation
     
     def observe(self, instances):
