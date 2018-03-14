@@ -142,11 +142,11 @@ class solve:
         return True
 
     # Return observables with thermalization based on observable obs
-    def _get_observable(self, instances, obs, param_set):
+    def _get_observable(self, instances, obs, param_set, replica_count):
         solver = backend.get_backend()
         for i in range(self._observable_timeout):
             sweeps = self._observable_sweeps
-            schedule = self._make_schedule(sweeps = sweeps, param_set = param_set, replica_count=self._obs_replica_count)
+            schedule = self._make_schedule(sweeps = sweeps, param_set = param_set, replica_count = replica_count)
             instances = solver.run_instances(schedule, instances, restarts = 1)
             # check equillibriation
             if np.all(np.vectorize(lambda i, obs: self._check_thermalized(i['results'], obs))(instances, obs)):
@@ -158,8 +158,10 @@ class solve:
             self._output('Using '+str(sweeps)+' sweeps')
         return [i['results'][i['results']['Samples']==i['results']['Samples'].max()] for i in instances]
 
-    def _get_disorder_avg(self, instances, obs, param_set):
-        return pd.concat(self._get_observable(instances, '<E>', param_set)).groupby(['Beta', 'Gamma', 'Lambda']).apply(np.mean).drop(columns=['Beta', 'Gamma', 'Lambda']).reset_index()
+    def _get_disorder_avg(self, instances, obs, param_set, replica_count = None):
+        if not replica_count:
+            replica_count = self._obs_replica_count
+        return pd.concat(self._get_observable(instances, '<E>', param_set, replica_count = replica_count)).groupby(['Beta', 'Gamma', 'Lambda']).apply(np.mean).drop(columns=['Beta', 'Gamma', 'Lambda']).reset_index()
 
 
     # Given a particular step and a starting field, uniformly place temperatures
@@ -230,7 +232,7 @@ class solve:
         disorder_avg = self._get_disorder_avg(instances, '<E>', param_set)
         if self._optimize_set:
             param_set = self._get_optimized_param_set(disorder_avg, self._get_linear_relation())
-            disorder_avg = self._get_disorder_avg(instances, '<E>', param_set)
+            disorder_avg = self._get_disorder_avg(instances, '<E>', param_set, replica_count=self._replica_count)
         return disorder_avg
         
 
