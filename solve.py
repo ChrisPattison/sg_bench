@@ -206,8 +206,8 @@ class solve:
         
         param_set = {}
         param_set['beta'] = beta_set
-        param_set['driver'] = relation['driver'](beta_set)
-        param_set['problem'] = relation['problem'](beta_set)
+        param_set['driver'] = list(relation['driver'](beta_set))
+        param_set['problem'] = list(relation['problem'](beta_set))
         self._detailed_log['optimized_param_set'] = param_set
         return param_set
 
