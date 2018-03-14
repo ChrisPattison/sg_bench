@@ -15,6 +15,7 @@ class solve:
         self._machine_readable = config['machine_readable']
 
         self._replica_count = config['replica_count']
+        self._obs_replica_count = config.get('obs_replica_count', self._replica_count)
 
         self._driver = self._get_param_set_values(config['driver'])
         self._problem = self._get_param_set_values(config['problem'])
@@ -39,6 +40,9 @@ class solve:
 
         self._detailed_log = {'beta':self._beta, 'driver':self._driver, 'problem':self._problem}
 
+        self._detailed_log['replica_count'] = self._replica_count
+        self._detailed_log['obs_replica_count'] = self._obs_replica_count
+
     def _get_param_set_values(self, dictionary):
         param_set = {}
         param_set['max'] = dictionary['max']
@@ -51,23 +55,26 @@ class solve:
         if not self._machine_readable:
             print(string)
 
-    def _get_initial_set(self, set_params):
+    def _get_initial_set(self, set_params, count):
         if set_params['distr'] == 'linear':
-            return np.linspace(set_params['min'], set_params['max'], self._replica_count)
+            return np.linspace(set_params['min'], set_params['max'], count)
         elif set_params['distr'] == 'invgeom':
             inv_stop   = 1./set_params['max']
             inv_start  = 1./set_params['min']
-            R = np.power(inv_stop/inv_start, 1.0/self._replica_count)
-            return 1.0/(inv_start * np.power(R, np.linspace(0, self._replica_count, self._replica_count)))
+            R = np.power(inv_stop/inv_start, 1.0/count)
+            return 1.0/(inv_start * np.power(R, np.linspace(0, count, count)))
         else:
-            return np.exp(np.linspace(np.log(set_params['min']), np.log(set_params['max']), self._replica_count))
+            return np.exp(np.linspace(np.log(set_params['min']), np.log(set_params['max']), count))
 
-    def _make_schedule(self, sweeps, param_set = None):
+    def _make_schedule(self, sweeps, param_set = None, replica_count = None):
+        if not replica_count:
+            replica_count = self._replica_count
+            
         if not param_set:
             param_set = {}
-            param_set['driver'] = self._driver['set'] if self._driver['set'] else self._get_initial_set(self._driver)
-            param_set['problem'] = self._problem['set'] if self._problem['set'] else self._get_initial_set(self._problem)
-            param_set['beta'] = self._beta['set'] if self._beta['set'] else self._get_initial_set(self._beta)
+            param_set['driver'] = self._driver['set'] if self._driver['set'] else self._get_initial_set(self._driver, replica_count)
+            param_set['problem'] = self._problem['set'] if self._problem['set'] else self._get_initial_set(self._problem, replica_count)
+            param_set['beta'] = self._beta['set'] if self._beta['set'] else self._get_initial_set(self._beta, replica_count)
         return pt_propanelib.make_schedule( \
                 sweeps = sweeps, \
                 param_set = param_set, \
@@ -139,7 +146,7 @@ class solve:
         solver = backend.get_backend()
         for i in range(self._observable_timeout):
             sweeps = self._observable_sweeps
-            schedule = self._make_schedule(sweeps = sweeps, param_set = param_set)
+            schedule = self._make_schedule(sweeps = sweeps, param_set = param_set, replica_count=self._obs_replica_count)
             instances = solver.run_instances(schedule, instances, restarts = 1)
             # check equillibriation
             if np.all(np.vectorize(lambda i, obs: self._check_thermalized(i['results'], obs))(instances, obs)):
@@ -248,7 +255,7 @@ class solve:
         self._detailed_log['p99_tts'] = p99_tts
         self._detailed_log['p_s'] = success_prob
         self._detailed_log['set'] = param_set
-        return tts, time_per_sweep
+        return tts, time_per_sweep * float(self._replica_count)/self._obs_replica_count
 
     def get_full_data(self):
         return self._detailed_log
