@@ -37,7 +37,7 @@ class solve:
             or self._beta['set'] ):
             warnings.warn('Optimize parameter set true but parameter set provided')
 
-        self._detailed_log = {'beta':self._beta}
+        self._detailed_log = {'beta':self._beta, 'driver':self._driver, 'problem':self._problem}
 
     def _get_param_set_values(self, dictionary):
         param_set = {}
