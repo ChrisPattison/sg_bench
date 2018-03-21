@@ -32,8 +32,15 @@ def extract_data(output):
     data = pd.concat(bins)
     return data
 
-def make_schedule(sweeps, field_set, beta, mc_sweeps, bins=None):
-    schedule = {'sweeps':int(sweeps), 'solver_mode':True, 'uniform_init':False, \
-        'schedule':[{ 'beta':beta, 'gamma':s, 'heatbath':1, 'microcanonical':mc_sweeps } for s in field_set], \
+def make_schedule(sweeps, param_set, mc_sweeps, bins=None):
+    assert(len(param_set['driver']) == len(param_set['beta']))
+    assert(len(param_set['problem']) == len(param_set['beta']))
+    schedule = {'sweeps':int(sweeps), 'solver_mode':True, 'uniform_init':False,
+        'schedule':[{ 
+            'beta':param_set['beta'][i], 
+            'gamma':param_set['driver'][i], 
+            'lambda':param_set['problem'][i], 
+            'heatbath':1, 
+            'microcanonical':mc_sweeps } for i in range(len(param_set['beta']))],
         'bin_set':([int(sweeps)//2**i for i in range(8)] if bins is None else bins)}
     return json.dumps(schedule, indent=1)
