@@ -45,8 +45,7 @@ class solve:
 
     def _get_param_set_values(self, dictionary):
         param_set = {}
-        param_set['max'] = dictionary['max']
-        param_set['min'] = dictionary['min']
+        param_set['points'] = dictionary['points']
         param_set['set'] = dictionary.get('set', None)
         param_set['distr'] = dictionary.get('distr', 'linear')
         return param_set
@@ -55,26 +54,20 @@ class solve:
         if not self._machine_readable:
             print(string)
 
-    def _get_initial_set(self, set_params, count):
-        if set_params['distr'] == 'linear':
-            return np.linspace(set_params['min'], set_params['max'], count)
-        elif set_params['distr'] == 'invgeom':
-            inv_stop   = 1./set_params['max']
-            inv_start  = 1./set_params['min']
-            R = np.power(inv_stop/inv_start, 1.0/count)
-            return 1.0/(inv_start * np.power(R, np.linspace(0, count, count)))
-        else:
-            return np.exp(np.linspace(np.log(set_params['min']), np.log(set_params['max']), count))
+    def _get_initial_set(self, count):
+        param_set['beta'] = np.linspace(self_.beta['points'][0], self_.beta['points'][-1], count)
+        linear_relation = self._get_linear_relation()
+        param_set['driver'] = linear_relation['driver'](param_set['beta'])
+        param_set['problem'] = linear_relation['problem'](param_set['problem'])
+        return param_set
+
 
     def _make_schedule(self, sweeps, param_set = None, replica_count = None):
         if not replica_count:
             replica_count = self._replica_count
             
         if not param_set:
-            param_set = {}
-            param_set['driver'] = self._driver['set'] if self._driver['set'] else self._get_initial_set(self._driver, replica_count)
-            param_set['problem'] = self._problem['set'] if self._problem['set'] else self._get_initial_set(self._problem, replica_count)
-            param_set['beta'] = self._beta['set'] if self._beta['set'] else self._get_initial_set(self._beta, replica_count)
+            param_set = self._get_initial_set(replica_count)
         return pt_propanelib.make_schedule( \
                 sweeps = sweeps, \
                 param_set = param_set, \
@@ -200,11 +193,11 @@ class solve:
         energy = {}
         energy['problem'] = self._interpolate_energy(disorder_avg['Beta'], disorder_avg['norm_<E_P>'])
         energy['driver'] = self._interpolate_energy(disorder_avg['Beta'], disorder_avg['norm_<E_D>'])
-        residual = lambda step: (self._get_beta_set(step, energy, self._beta['min'], relation)[-1] - self._beta['max'])
+        residual = lambda step: (self._get_beta_set(step, energy, self._beta['points'][0], relation)[-1] - self._beta['points'][-1])
 
         sdiff = lambda x: x.iloc[-1] - x.iloc[0]
         step = sp.optimize.bisect(residual, -np.log(.001), -np.log(.99))
-        beta_set = list(np.array(self._get_beta_set(step, energy, self._beta['min'], relation)))
+        beta_set = list(np.array(self._get_beta_set(step, energy, self._beta['points'][0], relation)))
         
         param_set = {}
         param_set['beta'] = beta_set
@@ -217,13 +210,13 @@ class solve:
     def _get_linear_relation(self):
         relation = {}
         relation['driver'] = sp.interpolate.interp1d(
-            [self._beta['min'], self._beta['max']], 
-            [self._driver['min'], self._driver['max']], 
-            bounds_error=False, fill_value=(self._driver['min'], self._driver['max']))
+            self._beta['points'], 
+            self._driver['points'], 
+            bounds_error=False, fill_value=(self._driver['points'][0], self._driver['points'][-1]))
         relation['problem'] = sp.interpolate.interp1d(
-            [self._beta['min'], self._beta['max']], 
-            [self._problem['min'], self._problem['max']], 
-            bounds_error=False, fill_value=(self._problem['min'], self._problem['max']))
+            self._beta['points'], 
+            self._problem['points'], 
+            bounds_error=False, fill_value=(self._problem['points'][0], self._problem['points'][-1]))
         return relation
     
     def observe(self, instances):
