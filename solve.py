@@ -55,10 +55,11 @@ class solve:
             print(string)
 
     def _get_initial_set(self, count):
-        param_set['beta'] = np.linspace(self_.beta['points'][0], self_.beta['points'][-1], count)
+        param_set = {}
+        param_set['beta'] = np.linspace(self._beta['points'][0], self._beta['points'][-1], count)
         linear_relation = self._get_linear_relation()
         param_set['driver'] = linear_relation['driver'](param_set['beta'])
-        param_set['problem'] = linear_relation['problem'](param_set['problem'])
+        param_set['problem'] = linear_relation['problem'](param_set['beta'])
         return param_set
 
 
