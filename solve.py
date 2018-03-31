@@ -21,6 +21,8 @@ class solve:
         self._problem = self._get_param_set_values(config['problem'])
         self._beta = self._get_param_set_values(config['beta'])
 
+        self._beta_distr = config.get('beta_power', 1.0)
+
         self._mc_sweeps = config.get('mc_sweeps', 10)
 
         self._restarts = config.get('bench_restarts', 100)
@@ -56,7 +58,7 @@ class solve:
 
     def _get_initial_set(self, count):
         param_set = {}
-        param_set['beta'] = np.linspace(self._beta['points'][0], self._beta['points'][-1], count)
+        param_set['beta'] = np.linspace((self._beta['points'][0])**(self._beta_distr), (self._beta['points'][-1])**(self._beta_distr), count)**(1./self._beta_distr)
         linear_relation = self._get_linear_relation()
         param_set['driver'] = linear_relation['driver'](param_set['beta'])
         param_set['problem'] = linear_relation['problem'](param_set['beta'])
