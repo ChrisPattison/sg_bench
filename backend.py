@@ -1,13 +1,20 @@
 import pandas as pd
 import numpy as np
+import os
 import tempfile
 import copy
+import io
 import subprocess
 import multiprocessing
-import dispy
 import bondfile
 import propanelib
+<<<<<<< HEAD
 import pt_propanelib
+=======
+import pa_propanelib
+import slurm
+import ssh
+>>>>>>> c274de4... Flatten slurm_dev activity
 # psutil
 
 def run_restart(schedule, instance, ground_energy = None): # schedule, instance
@@ -38,9 +45,9 @@ def run_restart(schedule, instance, ground_energy = None): # schedule, instance
             restart_data = pt_propanelib.extract_data(output)
     return restart_data
 
-def get_backend(dispyconf = None):
-    if dispyconf:
-        return remoterun(dispyconf)
+def get_backend(slurmconf = None):
+    if slurmconf:
+        return slurmrun(slurmconf)
     else:
         return localrun()
 
@@ -78,6 +85,7 @@ class localrun:
                 i['results'] = i['results'].groupby(['restart']).apply(lambda d: d[d['Total_Sweeps'] == d['Total_Sweeps'].max()]).reset_index(drop=True)
         return instances
 
+<<<<<<< HEAD
 class remoterun:
     def __init__(self, conf):
         self._dispyconf = conf
@@ -89,24 +97,39 @@ class remoterun:
         
         for i in instances:
             ground_energy = None if statistics else i['target_energy']
+=======
+    def close():
+        return None
+>>>>>>> c274de4... Flatten slurm_dev activity
 
-            # deepcopy required since i is not picklable
-            i_copy = copy.deepcopy(i)
-            i['results'] = []
-            for r in range(restarts):
-                i['results'].append(self._cluster.submit(schedule, i_copy, ground_energy = ground_energy))
 
-        _cluster.wait()
-        for i in instances:
-            for job in i['results']:
-                if job.exception is not None:
-                    print(job.exception)
-            i['results'] = [job() for job in i['results']]
-            # print(i['results'])
-            for index, df in enumerate(i['results']):
-                df['restart'] = index
-            i['results'] = pd.concat(i['results'])
+class slurmrun:
+    def __init__(self, slurmconf):
+        self._ssh = ssh.ssh_wrapper(slurmconf)
+        self._slurmconf = slurmconf
 
-            if not statistics:
-                i['results'] = i['results'].groupby(['restart']).apply(lambda d: d[d['Total_Sweeps'] == d['Total_Sweeps'].max()]).reset_index(drop=True)
+    def run_instances(self, schedule, instances, restarts, statistics=True):
+        with slurm.slurm(self._slurmconf, ssh=self._ssh) as slurm_wrapper:
+            commands = []
+
+            schedule_path = slurm_wrapper.put_temp_file(schedule)
+            for i in instances:
+                bonds = io.StringIO()
+                bondfile.write_bondfile(i['bonds'], bonds)
+                instance_path = slurm_wrapper.put_temp_file(bonds.getvalue())
+                output_path = instance_path + '.out'
+                slurm_wrapper.reg_temp_file(output_path)
+                commands.append('launch_restarts.py {} {} {} > {}'.format(schedule_path, instance_path, restarts, output_path))
+                i['output_file'] = output_path
+
+            slurm_wrapper.submit_job_array(commands)
+
+            for i in instances:
+                i['results'] = pd.read_csv(io.StringIO(self._ssh.get_string(i['output_file'])))
+                if not statistics:
+                    i['results'] = i['results'].groupby(['restart']).apply(lambda d: d[d['Total_Sweeps'] == d['Total_Sweeps'].max()]).reset_index(drop=True)
+
         return instances
+
+    def close():
+        self._ssh.close()

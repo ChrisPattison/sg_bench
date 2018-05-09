@@ -45,6 +45,9 @@ class solve:
         self._detailed_log['replica_count'] = self._replica_count
         self._detailed_log['obs_replica_count'] = self._obs_replica_count
 
+        self._slurm = config.get('slurm', None)
+        self._backend = backend.get_backend(self._slurm)
+
     def _get_param_set_values(self, dictionary):
         param_set = {}
         param_set['points'] = dictionary['points']
@@ -82,8 +85,13 @@ class solve:
         for i in range(len(instances)):
             instances[i]['target_energy'] = instances[i]['ground_energy'] * self._gse_target
         
+<<<<<<< HEAD
         schedule = self._make_schedule(sweeps = self._sweep_timeout, param_set = param_set)
         instances = backend.get_backend().run_instances(schedule, instances, self._restarts, statistics=False)
+=======
+        schedule = self._make_schedule(param_set = param_set)
+        instances = self._backend.run_instances(schedule, instances, self._restarts, statistics=False)
+>>>>>>> c274de4... Flatten slurm_dev activity
 
         p_s = []
         tts = []
@@ -139,11 +147,10 @@ class solve:
 
     # Return observables with thermalization based on observable obs
     def _get_observable(self, instances, obs, param_set, replica_count):
-        solver = backend.get_backend()
         for i in range(self._observable_timeout):
             sweeps = self._observable_sweeps
             schedule = self._make_schedule(sweeps = sweeps, param_set = param_set, replica_count = replica_count)
-            instances = solver.run_instances(schedule, instances, restarts = 1)
+            instances = self._backend.run_instances(schedule, instances, restarts = 1)
             # check equillibriation
             if np.all(np.vectorize(lambda i, obs: self._check_thermalized(i['results'], obs))(instances, obs)):
                 break
