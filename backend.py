@@ -8,13 +8,9 @@ import subprocess
 import multiprocessing
 import bondfile
 import propanelib
-<<<<<<< HEAD
 import pt_propanelib
-=======
-import pa_propanelib
 import slurm
 import ssh
->>>>>>> c274de4... Flatten slurm_dev activity
 # psutil
 
 def run_restart(schedule, instance, ground_energy = None): # schedule, instance
@@ -85,22 +81,8 @@ class localrun:
                 i['results'] = i['results'].groupby(['restart']).apply(lambda d: d[d['Total_Sweeps'] == d['Total_Sweeps'].max()]).reset_index(drop=True)
         return instances
 
-<<<<<<< HEAD
-class remoterun:
-    def __init__(self, conf):
-        self._dispyconf = conf
-        self._cluster = dispy.JobCluster(run_restart, depends=[bondfile, propanelib, pt_propanelib], \
-            loglevel=dispy.logger.CRITICAL, pulse_interval=2, reentrant=True, ping_interval=1,
-            ext_ip_addr=self._dispyconf['ext_ip_addr'], nodes=self._dispyconf['nodes'])
-    
-    def run_instances(self, schedule, instances, restarts, statistics=True):
-        
-        for i in instances:
-            ground_energy = None if statistics else i['target_energy']
-=======
     def close():
         return None
->>>>>>> c274de4... Flatten slurm_dev activity
 
 
 class slurmrun:
