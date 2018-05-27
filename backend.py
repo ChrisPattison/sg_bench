@@ -81,7 +81,7 @@ class localrun:
                 i['results'] = i['results'].groupby(['restart']).apply(lambda d: d[d['Total_Sweeps'] == d['Total_Sweeps'].max()]).reset_index(drop=True)
         return instances
 
-    def close():
+    def close(self):
         return None
 
 
@@ -113,5 +113,5 @@ class slurmrun:
 
         return instances
 
-    def close():
+    def close(self):
         self._ssh.close()
