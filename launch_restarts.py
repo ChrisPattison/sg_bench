@@ -8,7 +8,7 @@ import io
 import pt_propanelib
 
 def single_restart(schedule, bonds, index, ground_state_energy):
-    command = ['quit', schedule, bonds]
+    command = ['quit_solve', schedule, bonds]
     if ground_state_energy:
         command.extend(['-p', str(ground_state_energy)])
     output = subprocess.check_output(command, universal_newlines=True)
