@@ -102,7 +102,7 @@ class slurmrun:
                 output_path = instance_path + '.out'
                 slurm_wrapper.reg_temp_file(output_path)
                 commands.append('launch_restarts.py {} {} {} {} > {}'
-                    .format(schedule_path, instance_path, restarts, ('' if statistics else i['target_energy']), output_path))
+                    .format(schedule_path, instance_path, restarts, ('' if statistics else '-p ' + str(i['target_energy'])), output_path))
                 i['output_file'] = output_path
 
             slurm_wrapper.submit_job_array(commands)
