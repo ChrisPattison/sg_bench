@@ -12,7 +12,7 @@ def bench(optimize_temp = True):
     if not config['machine_readable']:
         print(tts[0])
         print(tts[1])
-        print('Median TTS: '+str(np.median(tts[0])*tts[1])+' us')
+        print('Median TTS: '+str(np.median(tts[0]))+' us')
     
     print(json.dumps(solver.get_full_data()))
 if __name__ == "__main__":

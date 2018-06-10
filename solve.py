@@ -97,7 +97,7 @@ class solve:
             if not np.isclose(success_prob, 1.0):
                 warnings.warn('TTS run timed out. Success probability: '+str(success_prob))
 
-            runtimes = np.sort(np.apply_along_axis(np.asscalar, 1, i['results'].groupby('restart')['Total_Sweeps'].unique().reset_index()['Total_Sweeps'].tolist()))
+            runtimes = np.sort(np.apply_along_axis(np.asscalar, 1, i['results'].groupby('restart')['Total_Walltime'].unique().reset_index()['Total_Walltime'].tolist()))
             p99_tts.append(np.percentile(runtimes, 99))
             runtimes = np.insert(runtimes, 0, 0)
             success = np.linspace(0., 1, len(runtimes))
@@ -241,10 +241,10 @@ class solve:
     def bench_tempering(self, instances):
         self._output('Computing observables...')
         param_set = None
-        disorder_avg = self._get_disorder_avg(instances, '<E>', param_set)
-        time_per_sweep = np.median(disorder_avg['Total_Walltime']/disorder_avg['Total_Sweeps'])
+        time_per_sweep = -1.0
 
         if self._optimize_set:
+            disorder_avg = self._get_disorder_avg(instances, '<E>', param_set)
             param_set = self._get_optimized_param_set(disorder_avg, self._get_linear_relation())
             self._output(param_set)
 
