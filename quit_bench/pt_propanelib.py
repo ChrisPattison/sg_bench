@@ -1,8 +1,8 @@
-import propanelib
 import pandas as pd
 import numpy as np
 import json
 import io
+from quit_bench import propanelib
 
 
 def extract_data(output):

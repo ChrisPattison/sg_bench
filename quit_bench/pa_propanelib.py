@@ -1,9 +1,9 @@
 import subprocess
-import propanelib
 import pandas as pd
 import numpy as np
 import json
 import io
+from quit_bench import propanelib
 
 def run_restart(schedule_file, instance_file): # schedule, instance
     command = ['propane', '-m', '1', schedule_file, instance_file]

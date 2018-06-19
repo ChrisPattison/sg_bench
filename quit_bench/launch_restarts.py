@@ -5,7 +5,7 @@ import subprocess
 import multiprocessing
 import argparse
 import io
-import pt_propanelib
+from quit_bench import pt_propanelib
 
 def single_restart(schedule, bonds, index, ground_state_energy):
     command = ['quit_solve', schedule, bonds]

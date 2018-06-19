@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-import bondfile
-import pa_propanelib
 import pandas as pd
 import numpy as np
 import warnings
@@ -9,6 +7,7 @@ import sys
 import tempfile
 import multiprocessing
 import io
+from quit_bench import bondfile, pa_propanelib
 
 # Creates and solves for the ground state of some spin glass instances given a template bondfile
 

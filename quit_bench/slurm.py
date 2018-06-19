@@ -1,7 +1,7 @@
 import time
-import ssh
 import io
 import pandas as pd
+from quit_bench import ssh
 
 # Wrapper to manage SLURM job arrays
 # Also keeps track of temp files and deletes them

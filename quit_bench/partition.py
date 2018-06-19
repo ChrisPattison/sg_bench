@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-import pinput
-import instance
 import pathlib
 import numpy as np
 import json
+from quit_bench import pinput instance
 
 def partition():
     config, instance_list, args = pinput.get_input('Partition instances\n partition.py <config> <output_directory> <processes>', fetch_instances = False)

@@ -6,16 +6,10 @@ import copy
 import io
 import subprocess
 import multiprocessing
-import bondfile
-import propanelib
-import pt_propanelib
-import slurm
-import ssh
+from quit_bench import bondfile, propanelib, pt_propanelib, slurm, ssh
 # psutil
 
 def run_restart(schedule, instance, ground_energy = None): # schedule, instance
-    import bondfile
-    import pt_propanelib
 
     with tempfile.NamedTemporaryFile('w') as schedule_file:
         # Write schedule

@@ -4,9 +4,7 @@ import scipy.interpolate
 import scipy.optimize
 import pandas as pd
 import warnings
-import bondfile
-import backend
-import pt_propanelib
+from quit_bench import pt_propanelib, backend, bondfile
 
 class solve:
     def __init__(self, config):

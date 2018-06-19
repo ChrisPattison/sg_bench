@@ -2,8 +2,8 @@ import numpy as np
 import pandas as pd
 import os
 import io
-import bondfile
 import pathlib
+from quit_bench import bondfile
 
 def read_instance(filename):
     instance = {}

@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-import solve
-import pinput
 import numpy as np
 import pandas as pd
 import json
+from quit_solve import pinput, solve
 
 def observe(optimize_temp = True):
     config, instances, args = pinput.get_input('Compute observables for instance class')

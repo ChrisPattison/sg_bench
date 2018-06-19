@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-import solve
-import pinput
 import numpy as np
 import json
+from quit_bench import pinput, solve
 
 def bench(optimize_temp = True):
     config, instances, args = pinput.get_input('Benchmark solver')
