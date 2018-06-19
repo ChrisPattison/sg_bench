@@ -5,7 +5,7 @@ import json
 from quit_solve import pinput, solve
 
 def observe(optimize_temp = True):
-    config, instances, args = pinput.get_input('Compute observables for instance class')
+    config, instances, args, _ = pinput.get_input('Compute observables for instance class')
     solver = solve.solve(config)
     run_data = solver.observe(instances)
     if not config['machine_readable']:

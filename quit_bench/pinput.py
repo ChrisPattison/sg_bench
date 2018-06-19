@@ -29,6 +29,7 @@ profile : float array
 
     # Strip out flags
     args = [a for a in args if not a.startswith('-')]
+    flags = [a for a in args if a.startswith('-')]
     config_path = pathlib.Path(args[1])
     config = {}
     with io.open(str(config_path.resolve()), 'r') as config_file:
@@ -47,4 +48,4 @@ profile : float array
     
     config['machine_readable'] = machine_readable
 
-    return config, instances, args
+    return config, instances, args, flags

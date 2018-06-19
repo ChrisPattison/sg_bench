@@ -5,7 +5,7 @@ import json
 from quit_bench import pinput instance
 
 def partition():
-    config, instance_list, args = pinput.get_input('Partition instances\n partition.py <config> <output_directory> <processes>', fetch_instances = False)
+    config, instance_list, args, _ = pinput.get_input('Partition instances\n partition.py <config> <output_directory> <processes>', fetch_instances = False)
 
     processes = int(args[3])
     config_path = pathlib.Path(args[1])

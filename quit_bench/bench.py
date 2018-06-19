@@ -4,7 +4,7 @@ import json
 from quit_bench import pinput, solve
 
 def bench(optimize_temp = True):
-    config, instances, args = pinput.get_input('Benchmark solver')
+    config, instances, args, _ = pinput.get_input('Benchmark solver')
     solver = solve.solve(config)
 
     tts = solver.bench_tempering(instances)
