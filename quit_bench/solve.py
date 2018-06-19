@@ -93,7 +93,7 @@ class solve:
         p99_tts = []
         for i in instances:
             min_energy = i['results'].groupby('restart').min()['E_MIN']
-            success_prob = np.mean(np.logical_or(np.isclose(i['target_energy'], min_energy), i['target_energy'] > min_energy))
+            success_prob = np.mean(i['results'].groupby('restart').max()['Total_Sweeps'] < self._sweep_timeout)
             if not np.isclose(success_prob, 1.0):
                 warnings.warn('TTS run timed out. Success probability: '+str(success_prob))
 
