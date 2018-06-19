@@ -95,7 +95,7 @@ class slurmrun:
                 instance_path = slurm_wrapper.put_temp_file(bonds.getvalue())
                 output_path = instance_path + '.out'
                 slurm_wrapper.reg_temp_file(output_path)
-                commands.append('launch_restarts.py {} {} {} {} > {}'
+                commands.append('python3 -m quit_bench.launch_restarts {} {} {} {} > {}'
                     .format(schedule_path, instance_path, restarts, ('' if statistics else '-p ' + str(i['target_energy'])), output_path))
                 i['output_file'] = output_path
 
