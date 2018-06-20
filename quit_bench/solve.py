@@ -7,7 +7,7 @@ import warnings
 from quit_bench import pt_propanelib, backend, bondfile
 
 class solve:
-    def __init__(self, config):
+    def __init__(self, config, borrowed_backend = None):
         self._success_prob = 0.99
 
         self._machine_readable = config['machine_readable']
@@ -44,7 +44,7 @@ class solve:
         self._detailed_log['obs_replica_count'] = self._obs_replica_count
 
         self._slurm = config.get('slurm', None)
-        self._backend = backend.get_backend(self._slurm)
+        self._backend = borrowed_backend if borrowed_backend else backend.get_backend(self._slurm)
 
     def _get_param_set_values(self, dictionary):
         param_set = {}
