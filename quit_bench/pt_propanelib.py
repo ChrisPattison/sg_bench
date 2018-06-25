@@ -32,10 +32,10 @@ def extract_data(output):
     data = pd.concat(bins)
     return data
 
-def make_schedule(sweeps, param_set, mc_sweeps, bins=None):
+def make_schedule(sweeps, param_set, mc_sweeps, hit_criteria, bins=None):
     assert(len(param_set['driver']) == len(param_set['beta']))
     assert(len(param_set['problem']) == len(param_set['beta']))
-    schedule = {'sweeps':int(sweeps), 'solver_mode':True, 'uniform_init':False,
+    schedule = {'sweeps':int(sweeps), 'solver_mode':True, 'uniform_init':False, 'hit_criteria':hit_criteria,
         'schedule':[{ 
             'beta':param_set['beta'][i], 
             'gamma':param_set['driver'][i], 
