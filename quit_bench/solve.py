@@ -99,8 +99,8 @@ class solve:
             success_prob = np.mean(i['results'].groupby('restart').max()['Total_Sweeps'] < self._sweep_timeout)
             if not np.isclose(success_prob, 1.0):
                 warnings.warn('TTS run timed out. Success probability: '+str(success_prob))
-            runtimes = np.sort(np.apply_along_axis(np.asscalar, 1, i['results'].groupby('restart')['Total_Walltime'].unique().reset_index()['Total_Walltime'].tolist()))
-            p99_tts.append(np.percentile(runtimes, 99))
+            runtimes = np.sort(i['results'].groupby('restart')['Total_Walltime'].max().reset_index()['Total_Walltime'].tolist())
+            p99_tts.append(np.percentile(i['results'].groupby('restart')['Total_Sweeps'].max().reset_index()['Total_Sweeps'], 99))
             runtimes = np.insert(runtimes, 0, 0)
             success = np.linspace(0., success_prob, len(runtimes))
 
@@ -118,7 +118,8 @@ class solve:
             else:
                 self._output(optimized)
                 warnings.warn('Optimization for TTS failed.')
-        self._detailed_log['p_xchg'] = list(np.mean(np.stack(p_xchg), axis=0))
+
+        #self._detailed_log['p_xchg'] = list(np.mean(np.stack(p_xchg), axis=0))
         return tts, p_s, p99_tts
 
     # Check whether the results are thermalized based on residual from last bin
