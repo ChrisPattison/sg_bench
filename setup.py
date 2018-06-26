@@ -7,5 +7,5 @@ setup(
     description='Benchmarking suite for Quantum Inspired Tempering',
     author='Chris Pattison',
     author_email='chpattison@gmail.com',
-    install_requires=['numpy', 'scipy', 'pandas', 'paramiko'],
+    install_requires=['numpy', 'scipy', 'pandas', 'paramiko', 'psutil'],
     py_modules=find_packages())
