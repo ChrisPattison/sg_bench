@@ -77,7 +77,7 @@ class solve:
         return pt_propanelib.make_schedule( \
                 sweeps = sweeps, \
                 param_set = param_set, \
-                mc_sweeps = self._mc_sweeps \
+                mc_sweeps = self._mc_sweeps, \
                 hit_criteria = self._hit_criteria)
 
     # Get TTS given a field set and sweep count

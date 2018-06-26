@@ -2,7 +2,7 @@
 import numpy as np
 import pandas as pd
 import json
-from quit_solve import pinput, solve
+from quit_bench import pinput, solve
 
 def observe(optimize_temp = True):
     config, instances, args, _ = pinput.get_input('Compute observables for instance class')
