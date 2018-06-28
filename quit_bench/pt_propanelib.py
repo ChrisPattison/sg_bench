@@ -40,7 +40,6 @@ def make_schedule(sweeps, param_set, mc_sweeps, hit_criteria, bins=None):
             'beta':param_set['beta'][i], 
             'gamma':param_set['driver'][i], 
             'lambda':param_set['problem'][i], 
-            'heatbath':1, 
             'microcanonical':mc_sweeps } for i in range(len(param_set['beta']))],
         'bin_set':([int(sweeps)//2**i for i in range(8)] if bins is None else bins)}
     return json.dumps(schedule, indent=1)
