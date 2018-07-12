@@ -4,7 +4,8 @@ import scipy.interpolate
 import scipy.optimize
 import pandas as pd
 import warnings
-from quit_bench import pt_propanelib, backend, bondfile
+from sg_bench import backend, bondfile
+from quit_bench import quit_propanelib
 
 class solve:
     def __init__(self, config, borrowed_backend = None):
@@ -46,7 +47,8 @@ class solve:
         self._detailed_log['obs_replica_count'] = self._obs_replica_count
 
         self._slurm = config.get('slurm', None)
-        self._backend = borrowed_backend if borrowed_backend else backend.get_backend(self._slurm)
+        self._backend = (borrowed_backend if borrowed_backend else 
+            backend.get_backend('python3 -m quit_bench.launch_restarts', slurmconf = self._slurm))
 
     def _get_param_set_values(self, dictionary):
         param_set = {}
@@ -74,10 +76,10 @@ class solve:
             
         if not param_set:
             param_set = self._get_initial_set(replica_count)
-        return pt_propanelib.make_schedule( \
-                sweeps = sweeps, \
-                param_set = param_set, \
-                mc_sweeps = self._mc_sweeps \
+        return quit_propanelib.make_schedule(
+                sweeps = sweeps,
+                param_set = param_set,
+                mc_sweeps = self._mc_sweeps,
                 hit_criteria = self._hit_criteria)
 
     # Get TTS given a field set and sweep count

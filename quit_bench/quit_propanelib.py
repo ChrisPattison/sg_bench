@@ -2,11 +2,11 @@ import pandas as pd
 import numpy as np
 import json
 import io
-from quit_bench import propanelib
+from sg_bench import parse_propane
 
 
 def extract_data(output):
-    data = propanelib.extract_data(output)
+    data = parse_propane.extract_data(output)
     # Bin samples
     bins = []
     for name, group in data.groupby(['Gamma', 'Beta']):
