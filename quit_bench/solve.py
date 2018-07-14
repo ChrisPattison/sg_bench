@@ -96,12 +96,11 @@ class solve:
         p99_tts = []
         p_xchg = []
         for i in instances:
-            p_xchg.append(list(
-                i['results'].groupby(['restart', 'Beta', 'Gamma', 'Lambda'], as_index=False).apply( lambda x:
-                    x.sort_values('Total_Sweeps', ascending=False).drop_duplicates('Total_Sweeps'))
-                .groupby(['Beta', 'Gamma', 'Lambda'], as_index=False).mean()['P_XCHG']))
+            avg_xchg_p = i['results'].groupby(['Beta', 'Gamma', 'Lambda', 'Total_Sweeps'], as_index=False).mean()
+            p_xchg.append(list(avg_xchg_p.loc[avg_xchg_p['Total_Sweeps'] == avg_xchg_p['Total_Sweeps'].max()].sort_values(['Beta', 'Gamma'])['P_XCHG']))
             min_energy = i['results'].groupby('restart').min()['E_MIN']
             success_prob = np.mean(i['results'].groupby('restart').max()['Total_Sweeps'] < self._sweep_timeout)
+
             if not np.isclose(success_prob, 1.0):
                 warnings.warn('TTS run timed out. Success probability: '+str(success_prob))
             runtimes = np.sort(i['results'].groupby('restart')['Total_Walltime'].max().reset_index()['Total_Walltime'].tolist())
@@ -124,7 +123,7 @@ class solve:
                 self._output(optimized)
                 warnings.warn('Optimization for TTS failed.')
 
-        #self._detailed_log['p_xchg'] = list(np.mean(np.stack(p_xchg), axis=0))
+        self._detailed_log['p_xchg'] = list(np.mean(np.stack(p_xchg).astype(float), axis=0))
         return tts, p_s, p99_tts
 
     # Check whether the results are thermalized based on residual from last bin
