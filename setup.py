@@ -2,7 +2,7 @@
 from setuptools import setup, find_packages
 setup(
     name='sg_bench', 
-    packages=['sg_bench','quit_bench'], 
+    packages=['sg_bench', 'quit_bench', 'pt_bench'], 
     version='1.0', 
     description='Benchmarking suite for Heuristic Solvers',
     author='Chris Pattison',
