@@ -4,6 +4,7 @@ import tempfile
 import time
 import random
 import string
+import uuid
 import numpy as np
 
 class ssh_wrapper:
@@ -60,12 +61,7 @@ class ssh_wrapper:
     # Generate a unique filename on the remote host
     # Race condition exists but is unlikely (95 bits of entropy)
     def _get_temp_file_name(self, remote_dir):
-        remote_filelist = self._sftp_client.listdir(remote_dir)
-        filename = None
-        while True:
-            filename = 'tmp.'+''.join(np.random.choice(list(string.ascii_letters + string.digits), size=16))
-            if not np.any([f.endswith(filename) for f in remote_filelist]):
-                break
+        filename = str(uuid.uuid4())
         return remote_dir + '/' + filename
 
     def __enter__(self):
