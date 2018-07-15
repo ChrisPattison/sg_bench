@@ -102,7 +102,8 @@ class solve:
             instance_tts = lambda t: t * np.log(1.-self._success_prob)/np.log(1.-clipped_prob(t))
 
             # CG methods fail due to cusp in TTS
-            optimized = sp.optimize.minimize(instance_tts, np.percentile(runtimes, 99), method='Nelder-Mead', tol=1e-5)
+            optimized = sp.optimize.minimize(instance_tts, np.percentile(runtimes, 99), 
+                method='Nelder-Mead', tol=1e-5, options={'adaptive':True, 'maxiter':500})
             if optimized.success:
                 optimal_runtime = optimized['x'][0]
                 optimal_tts = instance_tts(optimal_runtime)
