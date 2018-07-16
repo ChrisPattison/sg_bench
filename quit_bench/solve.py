@@ -96,33 +96,36 @@ class solve:
         p99_tts = []
         p_xchg = []
         for i in instances:
-            avg_xchg_p = i['results'].groupby(['Beta', 'Gamma', 'Lambda', 'Total_Sweeps'], as_index=False).mean()
-            p_xchg.append(list(avg_xchg_p.loc[avg_xchg_p['Total_Sweeps'] == avg_xchg_p['Total_Sweeps'].max()].sort_values(['Beta', 'Gamma'])['P_XCHG']))
+            avg_xchg_p = i['results'].groupby(['Beta', 'Total_Sweeps'], as_index=False).mean()
+            p_xchg.append(list(avg_xchg_p.loc[avg_xchg_p['Total_Sweeps'] == avg_xchg_p['Total_Sweeps'].max()].sort_values('Beta')['P_XCHG']))
             min_energy = i['results'].groupby('restart').min()['E_MIN']
             success_prob = np.mean(i['results'].groupby('restart').max()['Total_Sweeps'] < self._sweep_timeout)
 
             if not np.isclose(success_prob, 1.0):
                 warnings.warn('TTS run timed out. Success probability: '+str(success_prob))
-            runtimes = np.sort(i['results'].groupby('restart')['Total_Walltime'].max().reset_index()['Total_Walltime'].tolist())
+            runtimes = np.sort(i['results'].groupby('restart')['Total_Walltime'].max().reset_index()['Total_Walltime'].tolist()).astype(float)
             p99_tts.append(np.percentile(i['results'].groupby('restart')['Total_Sweeps'].max().reset_index()['Total_Sweeps'], 99))
             runtimes = np.insert(runtimes, 0, 0)
             success = np.linspace(0., success_prob, len(runtimes))
+            if success_prob > 0:
+                prob = sp.interpolate.interp1d(runtimes, success, kind='linear', bounds_error=False, fill_value='extrapolate')
+                clipped_prob = lambda x: np.clip(prob(x), 0.0, min(self._success_prob, success_prob))
+                instance_tts = lambda t: t * np.log1p(-self._success_prob)/np.log1p(-clipped_prob(t))
 
-            prob = sp.interpolate.interp1d(runtimes, success, kind='linear', bounds_error=False, fill_value='extrapolate')
-            clipped_prob = lambda x: np.clip(prob(x), 0.0, min(self._success_prob, success_prob))
-            instance_tts = lambda t: t * np.log(1.-self._success_prob)/np.log(1.-clipped_prob(t))
-
-            # CG methods fail due to cusp in TTS
-            optimized = sp.optimize.minimize(instance_tts, np.percentile(runtimes, 99), 
-                method='Nelder-Mead', tol=1e-5, options={'adaptive':True, 'maxiter':500})
-            if optimized.success:
-                optimal_runtime = optimized['x'][0]
-                optimal_tts = instance_tts(optimal_runtime)
-                tts.append(optimal_tts)
-                p_s.append(success_prob)
+                # CG methods fail due to cusp in TTS
+                optimized = sp.optimize.minimize(instance_tts, [np.percentile(runtimes, 50)], 
+                    method='Nelder-Mead', tol=1e-5, options={'maxiter':1000, 'adaptive':True})
+                if optimized.success:
+                    optimal_runtime = optimized['x'][0]
+                    optimal_tts = instance_tts(optimal_runtime)
+                    tts.append(optimal_tts)
+                else:
+                    self._output(optimized)
+                    warnings.warn('Optimization for TTS failed.')
             else:
-                self._output(optimized)
-                warnings.warn('Optimization for TTS failed.')
+                tts.append(float('inf'))
+
+            p_s.append(success_prob)
 
         self._detailed_log['p_xchg'] = list(np.mean(np.stack(p_xchg).astype(float), axis=0))
         return tts, p_s, p99_tts
