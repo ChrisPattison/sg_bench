@@ -204,7 +204,7 @@ class solve:
     # Fit fields to make dEdT constant
     # Optimize field count
     # Get optimal TTS
-    def bench_tempering(self, instances):
+    def bench(self, instances):
         self._output('Computing observables...')
         param_set = None
         time_per_sweep = -1.0

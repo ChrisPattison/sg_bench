@@ -5,7 +5,7 @@ from sg_bench import pinput
 def bench(solve, optimize_temp = True):
     config, instances, args, _ = pinput.get_input('Benchmark solver')
     solver = solve(config)
-    tts = solver.bench_tempering(instances)
+    tts = solver.bench(instances)
     if not config['machine_readable']:
         print(tts[0])
         print(tts[1])
