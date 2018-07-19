@@ -4,7 +4,8 @@ import scipy.interpolate
 import scipy.optimize
 import pandas as pd
 import warnings
-from psqa_bench import bondfile, backend, pa_propanelib
+from sg_bench import bondfile, backend
+from psqa_bench import pa_propanelib
 
 class solve:
     def __init__(self, config, borrowed_backend = None):
@@ -26,7 +27,8 @@ class solve:
         self._detailed_log = {'beta':self._beta, 'gamma':self._gamma, 'lambda':self._lambda, 'traj':self._traj}
 
         self._slurm = config.get('slurm', None)
-        self._backend = borrowed_backend if borrowed_backend else backend.get_backend(self._slurm)
+        self._backend = (borrowed_backend if borrowed_backend else 
+            backend.get_backend('python3 -m psqa_bench.launch_restarts', slurmconf = self._slurm))
 
         self._wolff_sweeps = config.get('wolff_sweeps', 1)
         self._precool = config.get('precool', 0)

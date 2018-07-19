@@ -3,10 +3,10 @@ import pandas as pd
 import numpy as np
 import json
 import io
-from psqa_bench import propanelib
+from sg_bench import parse_propane
 
 def extract_data(output):
-    return propanelib.extract_data(output)
+    return parse_propane.extract_data(output)
 
 def make_schedule(population, param_set, wolff_sweeps, precool, bins=None):
     anneal_schedule = ([{ 
