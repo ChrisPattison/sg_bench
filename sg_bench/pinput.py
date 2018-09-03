@@ -3,7 +3,7 @@ import json
 import io
 import pathlib
 import numpy as np
-from quit_bench import instance
+from sg_bench import instance
 
 def get_input(help_text, fetch_instances=True):
     args = sys.argv

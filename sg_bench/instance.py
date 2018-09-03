@@ -3,7 +3,7 @@ import pandas as pd
 import os
 import io
 import pathlib
-from quit_bench import bondfile
+from sg_bench import bondfile
 
 def read_instance(filename):
     instance = {}

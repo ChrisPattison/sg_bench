@@ -2,14 +2,14 @@ import pandas as pd
 import numpy as np
 import json
 import io
-from quit_bench import propanelib
+from sg_bench import parse_propane
 
 
 def extract_data(output):
-    data = propanelib.extract_data(output)
+    data = parse_propane.extract_data(output)
     # Bin samples
     bins = []
-    for name, group in data.groupby(['Gamma', 'Beta']):
+    for name, group in data.groupby(['Beta']):
         binned = group.sort_values('Samples').reset_index()
         del binned['index']
         binned['Bin'] = binned['Samples']
@@ -32,14 +32,10 @@ def extract_data(output):
     data = pd.concat(bins)
     return data
 
-def make_schedule(sweeps, param_set, mc_sweeps, hit_criteria, bins=None):
-    assert(len(param_set['driver']) == len(param_set['beta']))
-    assert(len(param_set['problem']) == len(param_set['beta']))
+def make_schedule(sweeps, param_set, hit_criteria, bins=None):
     schedule = {'sweeps':int(sweeps), 'solver_mode':True, 'uniform_init':False, 'hit_criteria':hit_criteria,
         'schedule':[{ 
-            'beta':param_set['beta'][i], 
-            'gamma':param_set['driver'][i], 
-            'lambda':param_set['problem'][i], 
-            'microcanonical':mc_sweeps } for i in range(len(param_set['beta']))],
+            'beta':param_set['beta'][i]
+        } for i in range(len(param_set['beta']))],
         'bin_set':([int(sweeps)//2**i for i in range(8)] if bins is None else bins)}
     return json.dumps(schedule, indent=1)
