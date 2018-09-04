@@ -40,7 +40,7 @@ def make_schedule(sweeps, param_set, mc_sweeps, hit_criteria, bins=None):
         'solver_mode':True, 
         'uniform_init':False, 
         'hit_criteria':hit_criteria, 
-        'microcanonical_sweeps':mc_sweeps,
+        'microcanonical_sweeps':int(mc_sweeps),
         'schedule':[{ 
             'beta':param_set['beta'][i], 
             'gamma':param_set['driver'][i], 
