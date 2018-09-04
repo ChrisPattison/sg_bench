@@ -8,6 +8,9 @@ from sg_bench import backend
 
 class replica_exchange_solve_base:
     def __init__(self, config, borrowed_backend = None):
+        if not hasattr(self, '_detailed_log'):
+            self._detailed_log = {}
+
         self._success_prob = 0.99
 
         self._machine_readable = config['machine_readable']

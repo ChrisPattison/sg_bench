@@ -7,8 +7,11 @@ import warnings
 from sg_bench import backend, bondfile, replica_exchange_solve_base
 from quit_bench import quit_propanelib
 
-class solve(replica_exchange_solve_base):
+class solve(replica_exchange_solve_base.replica_exchange_solve_base):
     def __init__(self, config, borrowed_backend = None):
+        self._var_set = ['Beta', 'Gamma', 'Lambda']
+        self._launcher_command = 'python3 -m quit_bench.launch_restarts'
+        super().__init__(config, borrowed_backend)
         
         self._driver = self._get_param_set_values(config['driver'])
         self._problem = self._get_param_set_values(config['problem'])
@@ -24,9 +27,9 @@ class solve(replica_exchange_solve_base):
             or self._beta['set'] ):
             warnings.warn('Optimize parameter set true but parameter set provided')
 
-        self._detailed_log = {'beta':self._beta, 'driver':self._driver, 'problem':self._problem}
-        self._var_set = ['Beta', 'Gamma', 'Lambda']
-        super().__init__(config, borrowed_backend)
+        self._detailed_log['beta'] = self._beta
+        self._detailed_log['driver'] = self._driver
+        self._detailed_log['problem'] = self._problem
 
     def _get_initial_set(self, count):
         param_set = {}
