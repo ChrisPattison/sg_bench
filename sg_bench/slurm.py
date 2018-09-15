@@ -48,10 +48,13 @@ class slurm:
         sub_script = self._make_sub_script('eval $(sed "${{SLURM_ARRAY_TASK_ID}}q;d" "{}")'.format(command_file))
 
         _, stdout, stderr = self._ssh.exec_command('sbatch --parsable --array=1-{} --chdir="{}" "{}"'.format(len(task_list), self._remote_work_dir, sub_script))
+        stdout = stdout.read().decode('utf-8')
+        stderr = stderr.read().decode('utf-8')
         try:
-            job_id = int(stdout.read().decode('utf-8'))
-        finally:
-            warnings.warn('Failed to submit SLURM job. Got {}'.format(stderr.read().decode('utf-8')))
+            job_id = int(stdout)
+        except:
+            warnings.warn('Failed to submit SLURM job. Got {}\n{}'.format(stderr, stdout))
+            raise
 
         while self._get_job_array_status(job_id):
             time.sleep(self._wait_period)
