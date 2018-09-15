@@ -1,6 +1,7 @@
 import time
 import io
 import pandas as pd
+import warnings
 from sg_bench import ssh
 
 # Wrapper to manage SLURM job arrays
@@ -46,8 +47,11 @@ class slurm:
         command_file = self.put_temp_file('\n'.join(task_list))
         sub_script = self._make_sub_script('eval $(sed "${{SLURM_ARRAY_TASK_ID}}q;d" "{}")'.format(command_file))
 
-        _, stdout, _ = self._ssh.exec_command('sbatch --parsable --array=1-{} --chdir="{}" "{}"'.format(len(task_list), self._remote_work_dir, sub_script))
-        job_id = int(stdout.read().decode('utf-8'))
+        _, stdout, stderr = self._ssh.exec_command('sbatch --parsable --array=1-{} --chdir="{}" "{}"'.format(len(task_list), self._remote_work_dir, sub_script))
+        try:
+            job_id = int(stdout.read().decode('utf-8'))
+        finally:
+            warnings.warn('Failed to submit SLURM job. Got {}'.format(stderr.read().decode('utf-8')))
 
         while self._get_job_array_status(job_id):
             time.sleep(self._wait_period)
