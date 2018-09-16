@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 setup(
     name='sg_bench', 
     packages=['sg_bench', 'quit_bench', 'pt_bench', 'psqa_bench'], 
-    version='2.0', 
+    version='2.1', 
     description='Benchmarking suite for Heuristic Solvers',
     author='Chris Pattison',
     author_email='chpattison@gmail.com',
