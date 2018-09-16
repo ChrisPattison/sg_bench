@@ -21,7 +21,7 @@ class slurm:
     # Returns true if the job array is still running
     def _get_job_array_status(self, job_id):
         _, stdout, _ = self._ssh.exec_command('squeue -j {} -r'.format(job_id))
-        job_list = pd.read_csv(io.StringIO(stdout.read().decode('utf-8')), delim_whitespace=True)
+        job_list = pd.read_csv(io.StringIO(stdout), delim_whitespace=True)
         return len(job_list['JOBID']) != 0
 
     def _make_sub_script(self, commands):
@@ -46,11 +46,11 @@ class slurm:
     def submit_job_array(self, task_list):
         command_file = self.put_temp_file('\n'.join(task_list))
         sub_script = self._make_sub_script('eval $(sed "${{SLURM_ARRAY_TASK_ID}}q;d" "{}")'.format(command_file))
+        exit_code, stdout, stderr = self._ssh.exec_command('sbatch --parsable --array=1-{} --chdir="{}" "{}"'.format(len(task_list), self._remote_work_dir, sub_script))
 
-        _, stdout, stderr = self._ssh.exec_command('sbatch --parsable --array=1-{} --chdir="{}" "{}"'.format(len(task_list), self._remote_work_dir, sub_script))
-        stdout = stdout.read().decode('utf-8')
-        stderr = stderr.read().decode('utf-8')
         try:
+            if exit_code != 0:
+                raise RuntimeError('Failed to submit SLURM job: Exit code non-zero')
             job_id = int(stdout)
         except:
             warnings.warn('Failed to submit SLURM job. Got {}\n{}'.format(stderr, stdout))

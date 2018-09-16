@@ -70,9 +70,16 @@ class ssh_wrapper:
     def __exit__(self, exc_type, exc_value, traceback):
         self.close()
 
-    def exec_command(self, command):
+    def exec_command(self, command, buffer_size=65536):
         self._make_active()
-        return self._client.exec_command(command)
+
+        channel = self._client.get_transport().open_session()
+        channel.exec_command(command)
+
+        exit_code = channel.recv_exit_status()
+        stdout = channel.recv(buffer_size)
+        stderr = channel.recv_stderr(buffer_size)
+        return exit_code, stdout.decode(), stderr.decode()
 
     # Write the string to a file on the remote host and return the path
     # Uses _get_temp_file_name to generate a filename on the remote host in remote_dir if remote_filename is not specified.
