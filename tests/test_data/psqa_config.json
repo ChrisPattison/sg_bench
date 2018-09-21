@@ -1,0 +1,16 @@
+{
+    "population":1,
+    "wolff_sweeps":1,
+    "traj": {
+        "points":[0.0, 1.0]
+    },
+    "gamma": {
+        "points":[40.0, 0.01]
+    },
+    "beta": {
+        "points":[2.5, 2.5]
+    },
+    "lambda": {
+        "points":[0.1, 40.0]
+    }
+}

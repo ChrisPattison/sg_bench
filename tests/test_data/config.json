@@ -1,0 +1,12 @@
+{
+    "instances":"test_instances/fcl_gse_6",
+    "bench_restarts":10,
+    "slurm": {
+        "hostname":"",
+        "user":"",
+        "sub_script":"",
+        "work_dir":"",
+        "timeout":10,
+        "wait_period":5
+    }
+}

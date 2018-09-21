@@ -1,0 +1,14 @@
+{
+    "replica_count":30,
+    "optimize_set":false,
+    "sweep_timeout":1024,
+    "driver": {
+        "points":[4.001, 4.0, 0.1]
+    },
+    "problem": {
+        "points":[1.0, 1.0, 1.0]
+    },
+    "beta": {
+        "points":[0.5, 1.6, 6.0]
+    }
+}
