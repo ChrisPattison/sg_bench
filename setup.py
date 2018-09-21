@@ -4,9 +4,16 @@ setup(
     name='sg_bench', 
     packages=find_packages('src'),
     package_dir={'': 'src'}, 
-    version='2.2', 
+    version='2.3', 
     description='Benchmarking suite for Heuristic Solvers',
     author='Chris Pattison',
     author_email='chpattison@gmail.com',
     install_requires=['numpy', 'scipy', 'pandas', 'paramiko', 'psutil'],
+    entry_points={
+        'console_scripts':[
+            'pt_bench=pt_bench.__main__:main',
+            'psqa_bench=psqa_bench.__main__:main',
+            'quit_bench=quit_bench.__main__:main',
+        ]
+    }
     )
