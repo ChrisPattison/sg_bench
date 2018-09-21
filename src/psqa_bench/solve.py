@@ -18,8 +18,8 @@ class solve(sequential_solve_base.sequential_solve_base):
         self._gamma = self._get_param_set_values(config['gamma'])
         self._lambda = self._get_param_set_values(config['lambda'])
 
-        self._sweeps = config.get('sweeps')
-        self._population = config.get('population')
+        self._sweeps = config['sweeps']
+        self._population = config['population']
         
         self._detailed_log = {'beta':self._beta, 'gamma':self._gamma, 'lambda':self._lambda, 'traj':self._traj}
 

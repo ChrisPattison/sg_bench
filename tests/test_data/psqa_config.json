@@ -1,6 +1,7 @@
 {
     "population":1,
     "wolff_sweeps":1,
+    "sweeps":100,
     "traj": {
         "points":[0.0, 1.0]
     },
