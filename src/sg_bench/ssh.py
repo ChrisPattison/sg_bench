@@ -25,6 +25,8 @@ class ssh_wrapper:
         self._last_check = time.time()
 
     def _connect_to_host(self):
+        if self._client:
+            self._client.close()
         self._client.connect(
             self._hostname, 
             username=self._user, 
@@ -33,6 +35,8 @@ class ssh_wrapper:
             timeout=self._timeout)
 
     def _open_sftp_session(self):
+        if self._sftp_client:
+            self._sftp_client.close()
         self._sftp_client = self._client.open_sftp()
     
     def _connection_active(self):
@@ -79,6 +83,7 @@ class ssh_wrapper:
         exit_code = channel.recv_exit_status()
         stdout = channel.recv(buffer_size)
         stderr = channel.recv_stderr(buffer_size)
+        channel.close()
         return exit_code, stdout.decode(), stderr.decode()
 
     # Write the string to a file on the remote host and return the path
