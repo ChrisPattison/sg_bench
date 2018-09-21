@@ -15,7 +15,7 @@ class sequential_solve_base(solve_base):
             instances[i]['target_energy'] = instances[i]['ground_energy'] * self._gse_target
         
         schedule = self._make_schedule(param_set = param_set)
-        instances = self._backend.run_instances(schedule, instances, self._restarts, statistics=False)
+        instances = self._backend.run_instances(self._launcher_command, schedule, instances, self._restarts, statistics=False)
 
         p_s = []
         tts = []
@@ -46,7 +46,7 @@ class sequential_solve_base(solve_base):
         for i in range(self._observable_timeout):
             sweeps = self._observable_sweeps
             schedule = self._make_schedule(sweeps = sweeps, param_set = param_set, replica_count = replica_count)
-            instances = self._backend.run_instances(schedule, instances, restarts = 1)
+            instances = self._backend.run_instances(self._launcher_command, schedule, instances, restarts = 1)
             # check equillibriation
             if np.all(np.vectorize(lambda i, obs: self._check_thermalized(i['results'], obs))(instances, obs)):
                 break

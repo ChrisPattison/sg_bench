@@ -15,7 +15,7 @@ class solve_base:
 
         self._slurm = config.get('slurm', None)
         self._backend = (borrowed_backend if borrowed_backend else 
-            backend.get_backend(self._launcher_command, slurmconf = self._slurm))
+            backend.get_backend(slurmconf = self._slurm))
 
     def _get_param_set_values(self, dictionary):
         param_set = {}
