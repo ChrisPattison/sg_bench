@@ -1,5 +1,6 @@
 dist/*
 *.egg-info/*
+*/*.egg-info/*
 .vscode/*
 *.pyc
 __pycache__/*
