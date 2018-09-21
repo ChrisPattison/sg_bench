@@ -4,48 +4,23 @@ import scipy.interpolate
 import scipy.optimize
 import pandas as pd
 import warnings
-from sg_bench import backend
+from sg_bench.solve_base import solve_base
 
-class replica_exchange_solve_base:
+class replica_exchange_solve_base(solve_base):
     def __init__(self, config, borrowed_backend = None):
-        if not hasattr(self, '_detailed_log'):
-            self._detailed_log = {}
-
-        self._success_prob = 0.99
-
-        self._machine_readable = config['machine_readable']
+        super().__init__(config, borrowed_backend = borrowed_backend)
 
         self._replica_count = config['replica_count']
         self._obs_replica_count = config.get('obs_replica_count', self._replica_count)
 
-        self._hit_criteria = config.get('hit_criteria', 1e-12)
-
-        self._restarts = config.get('bench_restarts', 100)
         self._sweep_timeout = config.get('sweep_timeout', 65536)
         self._optimize_set = config.get('optimize_set', False)
         self._observable_sweeps = config.get('observable_sweeps', 4096)
         self._observable_timeout = config.get('observable_timeout', 3)
         self._thermalize_threshold = config.get('thermalize_threshold', 1e-3)
-
-        self._gse_target = config.get('gse_target', 1.00)
         
         self._detailed_log['replica_count'] = self._replica_count
         self._detailed_log['obs_replica_count'] = self._obs_replica_count
-
-        self._slurm = config.get('slurm', None)
-        self._backend = (borrowed_backend if borrowed_backend else 
-            backend.get_backend(self._launcher_command, slurmconf = self._slurm))
-
-    def _get_param_set_values(self, dictionary):
-        param_set = {}
-        param_set['points'] = dictionary['points']
-        param_set['set'] = dictionary.get('set', None)
-        param_set['distr'] = dictionary.get('distr', 'linear')
-        return param_set
-
-    def _output(self, string):
-        if not self._machine_readable:
-            print(string)
 
     # Get TTS given a field set and sweep count
     def _get_tts(self, instances, param_set, cost = np.median):
@@ -136,7 +111,6 @@ class replica_exchange_solve_base:
             disorder_avg = self._get_disorder_avg(instances, '<E>', param_set, replica_count=self._replica_count)
         return disorder_avg
         
-
     # Disorder average <E>(field)
     # Fit fields to make dEdT constant
     # Optimize field count
@@ -159,6 +133,3 @@ class replica_exchange_solve_base:
         self._detailed_log['p_s'] = success_prob
         self._detailed_log['set'] = param_set
         return tts, time_per_sweep * float(self._replica_count)/self._obs_replica_count
-
-    def get_full_data(self):
-        return self._detailed_log

@@ -21,12 +21,6 @@ class solve(replica_exchange_solve_base.replica_exchange_solve_base):
 
         self._mc_sweeps = config.get('mc_sweeps', 10)
         
-        if self._optimize_set and (
-            self._driver['set'] 
-            or self._problem['set'] 
-            or self._beta['set'] ):
-            warnings.warn('Optimize parameter set true but parameter set provided')
-
         self._detailed_log['beta'] = self._beta
         self._detailed_log['driver'] = self._driver
         self._detailed_log['problem'] = self._problem
