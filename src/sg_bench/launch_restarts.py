@@ -7,6 +7,17 @@ import argparse
 import io
 import sys
 
+def get_pool():
+    cores = -1
+    # Attempt to find out the number of physical cores using psutil
+    try:
+        import psutil
+        cores = psutil.cpu_count(logical=False)
+    except ImportError:
+        cores = multiprocessing.cpu_count()
+    pool = multiprocessing.Pool(cores)
+    return pool
+
 class runner_base:
     def _single_restart(self, solver, schedule, bonds, index, ground_state_energy):
         command = [solver, schedule, bonds]
@@ -18,14 +29,7 @@ class runner_base:
         return result
 
     def run_restarts(self, schedule, bonds, restarts, ground_state_energy):
-        cores = -1
-        # Attempt to find out the number of physical cores using psutil
-        try:
-            import psutil
-            cores = psutil.cpu_count(logical=False)
-        except ImportError:
-            cores = multiprocessing.cpu_count()
-        pool = multiprocessing.Pool(cores)
+        pool = get_pool()
 
         restart_handles = [pool.apply_async(self._single_restart, 
             args=(self.solver, schedule, bonds, k, ground_state_energy)) for k in range(restarts)]
