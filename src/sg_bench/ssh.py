@@ -25,7 +25,7 @@ class ssh_wrapper:
         self._last_check = time.time()
 
     def _connect_to_host(self):
-        if self._client:
+        if getattr(self, '_client', None):
             self._client.close()
         self._client.connect(
             self._hostname, 
@@ -35,7 +35,7 @@ class ssh_wrapper:
             timeout=self._timeout)
 
     def _open_sftp_session(self):
-        if self._sftp_client:
+        if getattr(self, '_sftp_client', None):
             self._sftp_client.close()
         self._sftp_client = self._client.open_sftp()
     
