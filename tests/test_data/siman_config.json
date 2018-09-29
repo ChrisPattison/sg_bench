@@ -1,0 +1,7 @@
+{
+    "sweeps":100,
+    "solver":"an_ss_ge_fi",
+    "beta": {
+        "points":[0.1, 5.0]
+    }
+}
