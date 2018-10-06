@@ -25,16 +25,16 @@ class solve(sequential_solve_base.sequential_solve_base):
         self._detailed_log['sweeps'] = self._sweeps
         self._detailed_log['solver'] = self._solver
 
-    def _make_schedule(self, sweeps = None, param_set = None):
-        if not sweeps:
-            sweeps = self._sweeps
+    def _make_schedule(self, runtime = None, param_set = None):
+        if not runtime:
+            runtime = self._sweeps
         if not param_set:
             param_set = {}
             param_set['beta'] = self._beta
         config = {}
         config['param_set'] = {'beta':param_set['beta']}
-        config['sweeps'] = sweeps
+        config['sweeps'] = runtime
         config['solver'] = self._solver
         return json.dumps(config, indent=1)
-        
+
 

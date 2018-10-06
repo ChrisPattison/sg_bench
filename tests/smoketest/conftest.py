@@ -12,8 +12,8 @@ class smoketest:
 
         self._instances = instance.get_instance_set(str(instance_path.resolve()))
 
-    def run(self, solver):
-        tts = solver.bench(self._instances)
+    def run(self, solver, **kargs):
+        tts = solver.bench(self._instances, **kargs)
         return tts
 
 @pytest.fixture(scope='module', params=['test_data'])

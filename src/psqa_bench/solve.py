@@ -31,16 +31,16 @@ class solve(sequential_solve_base.sequential_solve_base):
         self._detailed_log['wolff_sweeps'] = self._wolff_sweeps
         self._detailed_log['precool'] = self._precool
 
-    def _make_schedule(self, sweeps = None, population = None, param_set = None, replica_count = None):
+    def _make_schedule(self, runtime = None, population = None, param_set = None, replica_count = None):
         #if not param_set:
         #    param_set = self._get_initial_set(replica_count)
-        if not sweeps:
-            sweeps = self._sweeps
+        if not runtime:
+            runtime = self._sweeps
         if not population:
             population = self._population
         if not param_set:
             relation = self._get_linear_relation()
-            traj = np.linspace(0.0, 1.0, sweeps)
+            traj = np.linspace(0.0, 1.0, runtime)
             param_set = {}
             param_set['gamma'] = relation['gamma'](traj)
             param_set['lambda'] = relation['lambda'](traj)

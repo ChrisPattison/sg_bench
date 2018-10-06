@@ -9,12 +9,12 @@ class sequential_solve_base(solve_base):
         super().__init__(config, borrowed_backend = borrowed_backend)
 
     # Get TTS given a field set and sweep count
-    def _get_tts(self, instances, param_set, cost = np.median):
+    def _get_tts(self, instances, param_set, runtime, cost = np.median):
         results = []
         for i in range(len(instances)):
             instances[i]['target_energy'] = instances[i]['ground_energy'] * self._gse_target
         
-        schedule = self._make_schedule(param_set = param_set)
+        schedule = self._make_schedule(param_set = param_set, runtime = runtime)
         instances = self._backend.run_instances(self._launcher_command, schedule, instances, self._restarts, statistics=False)
 
         p_s = []
@@ -64,11 +64,11 @@ class sequential_solve_base(solve_base):
             .groupby(self._var_set).apply(np.mean).drop(columns=self._var_set).reset_index())
 
     # Get TTS given parameters
-    def bench(self, instances):
+    def bench(self, instances, runtime=None):
         param_set = None
         
         self._output('Benchmarking...')
-        tts, success_prob = self._get_tts(instances, param_set)
+        tts, success_prob = self._get_tts(instances, param_set, runtime=runtime)
         self._detailed_log['tts'] = tts
         self._detailed_log['p_s'] = success_prob
         self._detailed_log['set'] = param_set
