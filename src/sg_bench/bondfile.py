@@ -5,7 +5,7 @@ import numpy as np
 # this renames spin indices such that there are no non-connected indices, removes duplicate couplers, and puts spin count and normalization at the top
 
 def read_bondfile(filename):
-    bonds = pd.read_csv(filename, delim_whitespace=True, header=None, names=['i','j','J_ij'], comment='#')
+    bonds = pd.read_csv(filename, delim_whitespace=True, header=None, names=['i','j','J_ij'], dtype={'i':int, 'j':int, 'J_ij':float}, comment='#')
 
     indices = np.union1d(np.unique(bonds['i']), np.unique(bonds['j']))
 
@@ -14,7 +14,10 @@ def read_bondfile(filename):
     bonds['i'] = list(new_indices(bonds['i']))
     bonds['j'] = list(new_indices(bonds['j']))
 
+    # Under certain conditions this causes the i and j columns to be casted to float making it necessary to recast to int
     bonds.loc[bonds['i'] > bonds['j'], ['j', 'i']] = bonds.loc[bonds['i'] > bonds['j'], ['i', 'j']].values
+    bonds['i'] = bonds['i'].astype(int)
+    bonds['j'] = bonds['j'].astype(int)
 
     bonds['field'] = bonds['i'] == bonds['j']
     bonds.sort_values(['field', 'i', 'j'], inplace=True)
