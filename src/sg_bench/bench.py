@@ -7,8 +7,7 @@ def bench(solve, optimize_temp = True):
     solver = solve(config)
     tts = solver.bench(instances)
     if not config['machine_readable']:
-        print(tts[0])
-        print(tts[1])
+        print(tts)
         print('Median TTS: '+str(np.median(tts[0]))+' us')
     
     print(json.dumps(solver.get_full_data()))
