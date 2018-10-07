@@ -72,4 +72,4 @@ class sequential_solve_base(solve_base):
         self._detailed_log['tts'] = tts
         self._detailed_log['p_s'] = success_prob
         self._detailed_log['set'] = param_set
-        return tts
+        return tts, np.nan
