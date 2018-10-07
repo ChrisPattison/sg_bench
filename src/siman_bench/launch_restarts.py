@@ -12,14 +12,7 @@ import re
 # read output and expand
 
 # Run the specified number of restarts on instance bond_file with schedule schedule_file
-def main(runner):
-    parser = argparse.ArgumentParser()
-    parser.add_argument("schedule_file", help="Name of the schedule file")
-    parser.add_argument("bond_file", help="Name of the bonds file")
-    parser.add_argument("restarts", help="Total number of restarts", type=int)
-    parser.add_argument("-p", help="Ground state energy to pass to solver", type=float, dest='ground_state_energy')
-
-    args = parser.parse_args()
+def main(runner, args):
     results = runner().run_restarts(args.schedule_file, args.bond_file, args.restarts, args.ground_state_energy)
     output = io.StringIO()
     results.to_csv(output)
@@ -49,7 +42,8 @@ class runner:
             '-s', str(sweeps),
             '-r', '1',
             '-v']
-        output = subprocess.run(command, encoding='utf-8', stdout=subprocess.PIPE)
+        output = subprocess.run(command, encoding='utf-8', stdout=subprocess.PIPE, check=True)
+
         run_time = float(re.search(r'(?m)^#work done in (?P<timing>(?:\d*)(?:\.\d*)?(?:e(?:\+|-)\d+)?) s$', output.stdout).group('timing'))
         output_table = '\n'.join(re.search(r'(?m)^(?!\#)(.*)$', output.stdout).groups())
         result = pd.read_csv(io.StringIO(output_table), delim_whitespace=True, header=None, names=['E_MIN', 'N_MIN', 'fraction', 'bondfile'])
@@ -61,4 +55,11 @@ class runner:
 
 # Run the specified number of restarts on instance bond_file with schedule schedule_file
 if __name__ == "__main__":
-    main(runner)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("schedule_file", help="Name of the schedule file")
+    parser.add_argument("bond_file", help="Name of the bonds file")
+    parser.add_argument("restarts", help="Total number of restarts", type=int)
+    parser.add_argument("-p", help="Ground state energy to pass to solver", type=float, dest='ground_state_energy')
+
+    args = parser.parse_args()
+    main(runner, args)

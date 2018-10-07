@@ -1,0 +1,5 @@
+{
+    "param_set": {"beta":{"points":[0.1, 3.0]}},
+    "sweeps": 1000,
+    "solver": "an_ss_ge_fi_vdeg"
+}
