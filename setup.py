@@ -4,7 +4,7 @@ setup(
     name='sg_bench', 
     packages=find_packages('src'),
     package_dir={'': 'src'}, 
-    version='2.7', 
+    version='2.8', 
     description='Benchmarking suite for Heuristic Solvers',
     author='Chris Pattison',
     author_email='chpattison@gmail.com',
