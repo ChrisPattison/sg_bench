@@ -7,6 +7,7 @@ import numpy as np
 import json
 import io
 import re
+from os import urandom
 
 # read schedule file to find info to pass to solver
 # read output and expand
@@ -40,6 +41,7 @@ class runner:
             '-b0', str(np.asscalar(np.min(config['param_set']['beta']['points']))),
             '-b1', str(beta),
             '-s', str(sweeps),
+            'r0', str(int.from_bytes(urandom(4), 'little') % (2**31)),
             '-r', '1',
             '-v']
         output = subprocess.run(command, encoding='utf-8', stdout=subprocess.PIPE, check=True)
