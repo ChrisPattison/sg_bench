@@ -39,7 +39,10 @@ profile : float array
     # Entries in config overload entries in the template config
     config_template_path = config.get('template_config', None)
     if config_template_path:
-        with (config_path.resolve().parent / pathlib.Path(config_template_path)).open() as template_file:
+        config_template_path = pathlib.Path(config_template_path)
+        if not config_template_path.is_absolute():
+            config_template_path = config_path.parents[0] / config_template_path
+        with config_template_path.resolve().open() as template_file:
             template_config = json.load(template_file)
         config = {**template_config, **config}
     # Load instances
