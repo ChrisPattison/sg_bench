@@ -35,6 +35,14 @@ profile : float array
     with io.open(str(config_path.resolve()), 'r') as config_file:
         config = json.load(config_file)
     
+    # Optional template config
+    # Entries in config overload entries in the template config
+    config_template_path = config.get('template_config', None)
+    if config_template_path:
+        with (config_path.resolve().parent / pathlib.Path(config_template_path)).open() as template_file:
+            template_config = json.load(template_file)
+        config = {**template_config, **config}
+    # Load instances
     instance_path = pathlib.Path(config['instances'])
     if not instance_path.is_absolute():
         instance_path = config_path.parents[0] / instance_path
