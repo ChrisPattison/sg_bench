@@ -1,7 +1,7 @@
 {
     "replica_count":30,
     "optimize_set":false,
-    "sweep_timeout":1024,
+    "sweep_timeout":4096,
     "beta": {
          "points":[0.1, 5.0]
     }

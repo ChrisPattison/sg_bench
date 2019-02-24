@@ -63,9 +63,12 @@ class slurmrun:
             slurm_wrapper.submit_job_array(command_list)
 
             for i in instances:
-                i['results'] = pd.read_csv(io.StringIO(self._ssh.get_string(i['output_file'])))
-                if not statistics:
-                    i['results'] = i['results'].groupby(['restart']).apply(lambda d: d[d['Total_Sweeps'] == d['Total_Sweeps'].max()]).reset_index(drop=True)
+                try:
+                    i['results'] = pd.read_csv(io.StringIO(self._ssh.get_string(i['output_file'])))
+                    if not statistics:
+                        i['results'] = i['results'].groupby(['restart']).apply(lambda d: d[d['Total_Sweeps'] == d['Total_Sweeps'].max()]).reset_index(drop=True)
+                except errors.EmptyDataError:
+                    i['results'] = None
 
         return instances
 
