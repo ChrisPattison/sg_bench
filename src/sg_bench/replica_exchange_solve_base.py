@@ -66,7 +66,6 @@ class replica_exchange_solve_base(solve_base):
                 tts.append(instance_tts)
             
         median_tts = lambda test_runtime: np.median([(inst_tts(test_runtime) if hasattr(inst_tts, '__call__') else inst_tts) for inst_tts in tts])
-        print(p99_tts)
         # CG methods fail due to cusp in TTS
         optimized = sp.optimize.minimize(median_tts, [np.percentile(p99_tts, 50)], 
             method='Nelder-Mead', tol=1e-5, options={'maxiter':1000, 'adaptive':True})
