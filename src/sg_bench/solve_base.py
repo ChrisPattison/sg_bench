@@ -17,6 +17,11 @@ class solve_base:
         self._backend = (borrowed_backend if borrowed_backend else 
             backend.get_backend(slurmconf = self._slurm))
 
+    def bootstrap(a, f=lambda x: x, count=1000):
+        # Use bias-corrected accelerated confidence interval
+        bootstraps = [f(np.random.choice(a, len(a))) for i in range(count)]
+        return np.mean(bootstraps), np.std(bootstraps) * np.sqrt(len(a)/(len(a)-1))
+
     def _get_param_set_values(self, dictionary):
         param_set = {}
         param_set['points'] = dictionary['points']

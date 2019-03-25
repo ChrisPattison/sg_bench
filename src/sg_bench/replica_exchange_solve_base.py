@@ -33,6 +33,7 @@ class replica_exchange_solve_base(solve_base):
 
         p_s = []
         tts = []
+        runtime_list = []
         p99_tts = []
         p_xchg = []
         for i in instances:
@@ -40,18 +41,22 @@ class replica_exchange_solve_base(solve_base):
             if i['results'] is not None:
                 avg_xchg_p = i['results'].groupby(self._var_set + ['Total_Sweeps'], as_index=False).mean()
                 p_xchg.append(list(avg_xchg_p.loc[avg_xchg_p['Total_Sweeps'] == avg_xchg_p['Total_Sweeps'].max()].sort_values(self._var_set)['P_XCHG']))
-                min_energy = i['results'].groupby('restart').min()['E_MIN']
-                success_prob = np.mean(i['results'].groupby('restart').max()['Total_Sweeps'] < self._sweep_timeout)
+                restart_group = i['results'].groupby('restart')
+                min_energy = restart_group.min()['E_MIN']
+
+                timeouts = restart_group.max()['Total_Sweeps'] < self._sweep_timeout
+                success_prob = np.mean(timeouts)
                 p_s.append(success_prob)
+                runtime_list.append(list(np.where(restart_group.max()['Total_Walltime'], -1, timeouts)))
             
                 if not np.isclose(success_prob, 1.0):
                     warnings.warn('TTS run timed out (sweeps). Success probability: '+str(success_prob))
                     inst_timeout = True
                 else:
-                    runtimes = np.sort(i['results'].groupby('restart')['Total_Walltime'].max().reset_index()['Total_Walltime'].tolist()).astype(float)
+                    runtimes = np.sort(restart_group['Total_Walltime'].max().reset_index()['Total_Walltime'].tolist()).astype(float)
                     runtimes = np.insert(runtimes, 0, 0)
 
-                    p99_tts.append(np.percentile(i['results'].groupby('restart')['Total_Sweeps'].max().reset_index()['Total_Sweeps'], 99))
+                    p99_tts.append(np.percentile(restart_group['Total_Sweeps'].max().reset_index()['Total_Sweeps'], 99))
                     success = np.linspace(0., success_prob, len(runtimes))
             else:
                 inst_timeout = True
@@ -65,19 +70,23 @@ class replica_exchange_solve_base(solve_base):
                 instance_tts = lambda t: t * np.log1p(-self._success_prob)/np.log1p(-clipped_prob(t))
                 tts.append(instance_tts)
             
-        median_tts = lambda test_runtime: np.median([(inst_tts(test_runtime) if hasattr(inst_tts, '__call__') else inst_tts) for inst_tts in tts])
-        # CG methods fail due to cusp in TTS
-        optimized = sp.optimize.minimize(median_tts, [np.percentile(p99_tts, 50)], 
-            method='Nelder-Mead', tol=1e-5, options={'maxiter':1000, 'adaptive':True})
-        if optimized.success:
-            optimal_runtime = optimized['x'][0]
-            optimal_tts = median_tts(optimal_runtime)
-        else:
-            self._output(optimized)
-            warnings.warn('Optimization for TTS failed.')
-            optimal_tts = None
+        def optimize_runtime(tts_set):
+            median_tts = lambda test_runtime: np.median([(inst_tts(test_runtime) if hasattr(inst_tts, '__call__') else inst_tts) for inst_tts in tts_set])
+            # CG methods fail due to cusp in TTS
+            optimized = sp.optimize.minimize(median_tts, [np.percentile(p99_tts, 50)], 
+                method='Nelder-Mead', tol=1e-5, options={'maxiter':1000, 'adaptive':True})
+            if optimized.success:
+                optimal_runtime = optimized['x'][0]
+                optimal_tts = median_tts(optimal_runtime)
+            else:
+                self._output(optimized)
+                warnings.warn('Optimization for TTS failed.')
+                optimal_runtime = None
+                optimal_tts = None
+            return optimal_runtime, optimal_tts
 
-
+        optimal_runtime, optimal_tts = optimize_runtime(tts)
+        self._detailed_log['runtime'] = runtime_list
         self._detailed_log['p_xchg'] = list(np.mean(np.stack(p_xchg).astype(float), axis=0))
         return optimal_tts, p_s, p99_tts
 
