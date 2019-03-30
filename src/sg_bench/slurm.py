@@ -2,6 +2,7 @@ import time
 import io
 import pandas as pd
 import warnings
+import sys
 from sg_bench import ssh
 
 # Wrapper to manage SLURM job arrays
@@ -21,8 +22,13 @@ class slurm:
     # Returns true if the job array is still running
     def _get_job_array_status(self, job_id):
         _, stdout, _ = self._ssh.exec_command('squeue -j {} -r'.format(job_id))
-        job_list = pd.read_csv(io.StringIO(stdout), delim_whitespace=True)
-        return len(job_list['JOBID']) != 0
+        unfinished_jobs = None
+        try:
+            job_list = pd.read_csv(io.StringIO(stdout), delim_whitespace=True)
+            unfinished_jobs = (len(job_list['JOBID']))
+        except pd.errors.EmptyDataError:
+            unfinished_jobs = 0
+        return unfinished_jobs != 0
 
     def _make_sub_script(self, commands):
         contents = self._submission_script
@@ -56,6 +62,7 @@ class slurm:
             warnings.warn('Failed to submit SLURM job. Got {}\n{}'.format(stderr, stdout))
             raise
 
+        time.sleep(self._wait_period)
         while self._get_job_array_status(job_id):
             time.sleep(self._wait_period)
 

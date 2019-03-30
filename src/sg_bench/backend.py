@@ -67,7 +67,7 @@ class slurmrun:
                     i['results'] = pd.read_csv(io.StringIO(self._ssh.get_string(i['output_file'])))
                     if not statistics:
                         i['results'] = i['results'].groupby(['restart']).apply(lambda d: d[d['Total_Sweeps'] == d['Total_Sweeps'].max()]).reset_index(drop=True)
-                except errors.EmptyDataError:
+                except pd.errors.EmptyDataError:
                     i['results'] = None
 
         return instances

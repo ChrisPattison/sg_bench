@@ -47,7 +47,7 @@ class replica_exchange_solve_base(solve_base):
                 timeouts = restart_group.max()['Total_Sweeps'] < self._sweep_timeout
                 success_prob = np.mean(timeouts)
                 p_s.append(success_prob)
-                runtime_list.append(list(np.where(restart_group.max()['Total_Walltime'], -1, timeouts)))
+                runtime_list.append(list(np.where(timeouts, restart_group.max()['Total_Walltime'], -1).astype(float)))
             
                 if not np.isclose(success_prob, 1.0):
                     warnings.warn('TTS run timed out (sweeps). Success probability: '+str(success_prob))
@@ -69,11 +69,19 @@ class replica_exchange_solve_base(solve_base):
                 clipped_prob = lambda x: np.clip(prob(x), 0.0, min(self._success_prob, success_prob))
                 instance_tts = lambda t: t * np.log1p(-self._success_prob)/np.log1p(-clipped_prob(t))
                 tts.append(instance_tts)
-            
+
         def optimize_runtime(tts_set):
+            def smooth_function(f, points = 100, width = 1e-4, support = 6):
+                '''Smooth out a function using a convolution with a gaussian'''
+                def convolved_function(x):
+                    eval_points = np.linspace(-width*support, width*support, points)
+                    weights = np.exp(-1/2 * (eval_points / width)**2) / (width*np.sqrt(2 * np.pi))
+                    return np.sum(np.vectorize(f)(eval_points+x) * weights)
+                return convolved_function
+
             median_tts = lambda test_runtime: np.median([(inst_tts(test_runtime) if hasattr(inst_tts, '__call__') else inst_tts) for inst_tts in tts_set])
-            # CG methods fail due to cusp in TTS
-            optimized = sp.optimize.minimize(median_tts, [np.percentile(p99_tts, 50)], 
+            
+            optimized = sp.optimize.minimize(smooth_function(median_tts), [np.percentile(p99_tts, 50)], 
                 method='Nelder-Mead', tol=1e-5, options={'maxiter':1000, 'adaptive':True})
             if optimized.success:
                 optimal_runtime = optimized['x'][0]
