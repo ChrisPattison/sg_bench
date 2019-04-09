@@ -33,7 +33,6 @@ class replica_exchange_solve_base(solve_base):
 
         p_s = []
         runtime_list = []
-        p99_tts = []
         p_xchg = []
         for i in instances:
             if i['results'] is not None:
@@ -53,17 +52,16 @@ class replica_exchange_solve_base(solve_base):
                     runtimes = np.sort(restart_group['Total_Walltime'].max().reset_index()['Total_Walltime']).astype(float).tolist()
                     runtimes = np.insert(runtimes, 0, 0)
 
-                    p99_tts.append(float(np.percentile(restart_group['Total_Sweeps'].max().reset_index()['Total_Sweeps'], 99)))
                     success = np.linspace(0., success_prob, len(runtimes))
             else:
                 runtime_list.append([float('inf') for i in range(self._restarts)])
                 warnings.warn('TTS run timed out (wallclock)')
 
 
-        optimal_runtime, optimal_tts = self._optimize_runtime(tts)
+        optimal_runtime, optimal_tts = self._optimize_runtime(runtime_list)
         self._detailed_log['runtime'] = runtime_list
         self._detailed_log['p_xchg'] = np.mean(np.stack(p_xchg).astype(float), axis=0).tolist()
-        return optimal_tts, p_s, p99_tts
+        return optimal_tts, p_s, [np.percentile(v, 99) for v in runtime_list]
 
     # Creates a function that will give the median TTS as a function of runtime
     def _time_to_solution(self, runtime_list):
@@ -87,7 +85,8 @@ class replica_exchange_solve_base(solve_base):
 
     # Given a list of runtimes, return the optimal median TTS
     def _optimize_runtime(self, runtime_list):
-        optimized = sp.optimize.minimize(self._time_to_solution(runtime_list), [np.percentile(p99_tts, 50)], 
+        median_tts = self._time_to_solution(runtime_list)
+        optimized = sp.optimize.minimize(median_tts, [np.percentile([np.percentile(v, 50) for v in runtime_list], 10)], 
             method='Nelder-Mead', tol=1e-5, options={'maxiter':1000, 'adaptive':True})
         if optimized.success:
             optimal_runtime = optimized['x'][0]
