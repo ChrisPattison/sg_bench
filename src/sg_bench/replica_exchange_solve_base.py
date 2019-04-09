@@ -13,7 +13,7 @@ class replica_exchange_solve_base(solve_base):
         self._replica_count = config['replica_count']
         self._obs_replica_count = config.get('obs_replica_count', self._replica_count)
 
-        self._sweep_timeout = config.get('sweep_timeout', 65536)
+        self._sweep_timeout = config['sweep_timeout']
         self._optimize_set = config.get('optimize_set', False)
         self._observable_sweeps = config.get('observable_sweeps', 4096)
         self._observable_timeout = config.get('observable_timeout', 3)
@@ -40,23 +40,23 @@ class replica_exchange_solve_base(solve_base):
             inst_timeout = False
             if i['results'] is not None:
                 avg_xchg_p = i['results'].groupby(self._var_set + ['Total_Sweeps'], as_index=False).mean()
-                p_xchg.append(list(avg_xchg_p.loc[avg_xchg_p['Total_Sweeps'] == avg_xchg_p['Total_Sweeps'].max()].sort_values(self._var_set)['P_XCHG']))
+                p_xchg.append((avg_xchg_p.loc[avg_xchg_p['Total_Sweeps'] == avg_xchg_p['Total_Sweeps'].max()].sort_values(self._var_set)['P_XCHG']).tolist())
                 restart_group = i['results'].groupby('restart')
                 min_energy = restart_group.min()['E_MIN']
 
                 timeouts = restart_group.max()['Total_Sweeps'] < self._sweep_timeout
                 success_prob = np.mean(timeouts)
-                p_s.append(success_prob)
-                runtime_list.append(list(np.where(timeouts, restart_group.max()['Total_Walltime'], -1).astype(float)))
+                p_s.append(float(success_prob))
+                runtime_list.append(np.where(timeouts, restart_group.max()['Total_Walltime'], float('inf')))
             
                 if not np.isclose(success_prob, 1.0):
                     warnings.warn('TTS run timed out (sweeps). Success probability: '+str(success_prob))
                     inst_timeout = True
                 else:
-                    runtimes = np.sort(restart_group['Total_Walltime'].max().reset_index()['Total_Walltime'].tolist()).astype(float)
+                    runtimes = np.sort(restart_group['Total_Walltime'].max().reset_index()['Total_Walltime']).astype(float).tolist()
                     runtimes = np.insert(runtimes, 0, 0)
 
-                    p99_tts.append(np.percentile(restart_group['Total_Sweeps'].max().reset_index()['Total_Sweeps'], 99))
+                    p99_tts.append(float(np.percentile(restart_group['Total_Sweeps'].max().reset_index()['Total_Sweeps'], 99)))
                     success = np.linspace(0., success_prob, len(runtimes))
             else:
                 inst_timeout = True
@@ -64,6 +64,7 @@ class replica_exchange_solve_base(solve_base):
 
             if inst_timeout:
                 tts.append(float('inf'))
+                p99_tts.append(float('inf'))
             else:
                 prob = sp.interpolate.interp1d(runtimes, success, kind='linear', bounds_error=False, fill_value='extrapolate')
                 clipped_prob = lambda x: np.clip(prob(x), 0.0, min(self._success_prob, success_prob))
@@ -95,7 +96,7 @@ class replica_exchange_solve_base(solve_base):
 
         optimal_runtime, optimal_tts = optimize_runtime(tts)
         self._detailed_log['runtime'] = runtime_list
-        self._detailed_log['p_xchg'] = list(np.mean(np.stack(p_xchg).astype(float), axis=0))
+        self._detailed_log['p_xchg'] = np.mean(np.stack(p_xchg).astype(float), axis=0).tolist()
         return optimal_tts, p_s, p99_tts
 
     # Check whether the results are thermalized based on residual from last bin
