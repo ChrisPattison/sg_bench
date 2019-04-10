@@ -99,8 +99,8 @@ class replica_exchange_solve_base(solve_base):
         else:
             self._output(optimized)
             warnings.warn('Optimization for TTS failed.')
-            optimal_runtime = None
-            optimal_tts = None
+            optimal_runtime = float('nan')
+            optimal_tts = float('nan')
         return optimal_runtime, optimal_tts
 
     # Check whether the results are thermalized based on residual from last bin
