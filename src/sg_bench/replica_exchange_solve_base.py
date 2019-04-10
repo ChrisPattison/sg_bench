@@ -67,27 +67,32 @@ class replica_exchange_solve_base(solve_base):
     def _time_to_solution(self, runtime_list):
         # Assemble p(R)
         tts = []
+        p_s = []
         for runtimes in runtime_list:
-            prob = sp.interpolate.interp1d(runtimes, np.linspace(0,1,num=len(runtimes)), kind='linear', bounds_error=False, fill_value='extrapolate')
-            clipped_prob = lambda x: np.clip(prob(x), 0.0, self._success_prob)
+            runtimes = np.sort(runtimes)
+            runtime_bounds = (min(runtimes), max(runtimes))
+            prob = sp.interpolate.interp1d(np.insert(runtimes, 0, 0), np.linspace(0,1,num=len(runtimes)+1), kind='linear', bounds_error=True)
+            clipped_prob = lambda x: np.clip(prob(np.clip(x, 0, runtime_bounds[1]-1e-6)), 0.0, self._success_prob)
             instance_tts = lambda t: t * np.log1p(-self._success_prob)/np.log1p(-clipped_prob(t))
+            p_s.append(clipped_prob)
             tts.append(instance_tts)
 
         def smooth_function(f, points = 20, width = 1, support = 6):
+            eval_points = np.linspace(-width*support, width*support, points)
+            weights = np.exp(-1/2 * (eval_points / width)**2) / (width*np.sqrt(2 * np.pi))
             '''Smooth out a function using a convolution with a gaussian'''
             def convolved_function(x):
-                eval_points = np.linspace(-width*support, width*support, points)
-                weights = np.exp(-1/2 * (eval_points / width)**2) / (width*np.sqrt(2 * np.pi))
                 return np.sum(np.vectorize(f)(eval_points+x) * weights)
             return convolved_function
         median_tts = lambda test_runtime: np.median([(inst_tts(test_runtime) if hasattr(inst_tts, '__call__') else inst_tts) for inst_tts in tts])
-        return smooth_function(median_tts)
+        return median_tts
 
     # Given a list of runtimes, return the optimal median TTS
     def _optimize_runtime(self, runtime_list):
+        max_runtimes = [np.percentile(v, 99) for v in runtime_list]
         median_tts = self._time_to_solution(runtime_list)
-        optimized = sp.optimize.minimize(median_tts, [np.percentile([np.percentile(v, 50) for v in runtime_list], 10)], 
-            method='Nelder-Mead', tol=1e-5, options={'maxiter':1000, 'adaptive':True})
+        optimized = sp.optimize.minimize(median_tts, [[np.percentile(max_runtimes, 90), np.percentile(max_runtimes, 99)]],
+            method='Nelder-Mead', tol=1e-5, options={'maxiter':10000, 'adaptive':True})
         if optimized.success:
             optimal_runtime = optimized['x'][0]
             optimal_tts = median_tts(optimal_runtime)
