@@ -84,15 +84,17 @@ class replica_exchange_solve_base(solve_base):
             def convolved_function(x):
                 return np.sum(np.vectorize(f)(eval_points+x) * weights)
             return convolved_function
-        median_tts = lambda test_runtime: np.median([(inst_tts(test_runtime) if hasattr(inst_tts, '__call__') else inst_tts) for inst_tts in tts])
+        median_tts = lambda test_runtime: np.median(np.fromiter(
+            ((inst_tts(test_runtime) if hasattr(inst_tts, '__call__') else inst_tts) for inst_tts in tts), 
+            dtype='float', count=len(tts)))
         return median_tts
 
     # Given a list of runtimes, return the optimal median TTS
     def _optimize_runtime(self, runtime_list):
-        max_runtimes = [np.percentile(v, 99) for v in runtime_list]
+        max_runtimes = [np.percentile(v, 95) for v in runtime_list]
         median_tts = self._time_to_solution(runtime_list)
-        optimized = sp.optimize.minimize(median_tts, [[np.percentile(max_runtimes, 90), np.percentile(max_runtimes, 99)]],
-            method='Nelder-Mead', tol=1e-5, options={'maxiter':10000, 'adaptive':True})
+        optimized = sp.optimize.minimize(median_tts, [[np.percentile(max_runtimes, 95), np.percentile(max_runtimes, 99)]],
+            method='Nelder-Mead', tol=1e-5, options={'maxiter':1000, 'adaptive':True})
         if optimized.success:
             optimal_runtime = optimized['x'][0]
             optimal_tts = median_tts(optimal_runtime)
