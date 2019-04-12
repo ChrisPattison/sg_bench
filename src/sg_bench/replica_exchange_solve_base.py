@@ -63,20 +63,18 @@ class replica_exchange_solve_base(solve_base):
         self._detailed_log['p_xchg'] = np.mean(np.stack(p_xchg).astype(float), axis=0).tolist()
         return optimal_tts, p_s, [np.percentile(v, 99) for v in runtime_list]
 
+    def _inst_time_to_solution(self, runtimes):
+        # Assemble p(R)
+        runtimes = np.sort(runtimes)
+        runtime_bounds = (min(runtimes), max(runtimes))
+        prob = sp.interpolate.interp1d(np.insert(runtimes, 0, 0), np.linspace(0,1,num=len(runtimes)+1), kind='linear', bounds_error=True)
+        clipped_prob = lambda x: np.clip(prob(np.clip(x, 0, runtime_bounds[1]-1e-6)), 0.0, self._success_prob)
+        instance_tts = lambda t: t * np.log1p(-self._success_prob)/np.log1p(-clipped_prob(t))
+        return instance_tts
+
+
     # Creates a function that will give the median TTS as a function of runtime
     def _time_to_solution(self, runtime_list):
-        # Assemble p(R)
-        tts = []
-        p_s = []
-        for runtimes in runtime_list:
-            runtimes = np.sort(runtimes)
-            runtime_bounds = (min(runtimes), max(runtimes))
-            prob = sp.interpolate.interp1d(np.insert(runtimes, 0, 0), np.linspace(0,1,num=len(runtimes)+1), kind='linear', bounds_error=True)
-            clipped_prob = lambda x: np.clip(prob(np.clip(x, 0, runtime_bounds[1]-1e-6)), 0.0, self._success_prob)
-            instance_tts = lambda t: t * np.log1p(-self._success_prob)/np.log1p(-clipped_prob(t))
-            p_s.append(clipped_prob)
-            tts.append(instance_tts)
-
         def smooth_function(f, points = 20, width = 1, support = 6):
             eval_points = np.linspace(-width*support, width*support, points)
             weights = np.exp(-1/2 * (eval_points / width)**2) / (width*np.sqrt(2 * np.pi))
@@ -84,6 +82,9 @@ class replica_exchange_solve_base(solve_base):
             def convolved_function(x):
                 return np.sum(np.vectorize(f)(eval_points+x) * weights)
             return convolved_function
+        
+        tts = [self._inst_time_to_solution(runtimes) for runtimes in runtime_list]
+
         median_tts = lambda test_runtime: np.median(np.fromiter(
             ((inst_tts(test_runtime) if hasattr(inst_tts, '__call__') else inst_tts) for inst_tts in tts), 
             dtype='float', count=len(tts)))
@@ -93,10 +94,13 @@ class replica_exchange_solve_base(solve_base):
     def _optimize_runtime(self, runtime_list):
         max_runtimes = [np.percentile(v, 95) for v in runtime_list]
         median_tts = self._time_to_solution(runtime_list)
-        optimized = sp.optimize.minimize(median_tts, [[np.percentile(max_runtimes, 95), np.percentile(max_runtimes, 99)]],
-            method='Nelder-Mead', tol=1e-5, options={'maxiter':1000, 'adaptive':True})
+        logspace_tts = lambda x: median_tts(np.exp(x))
+        
+        optimized = sp.optimize.minimize(logspace_tts, x0=[float('nan')],
+            method='Nelder-Mead', tol=1e-5, options={'maxiter':1000, 'adaptive':True, 'initial_simplex':np.log([[np.percentile(max_runtimes, 50)], [np.percentile(max_runtimes, 99)]])})
+
         if optimized.success:
-            optimal_runtime = optimized['x'][0]
+            optimal_runtime = np.exp(optimized['x'][0])
             optimal_tts = median_tts(optimal_runtime)
         else:
             self._output(optimized)
